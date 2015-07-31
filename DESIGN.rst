@@ -30,3 +30,9 @@ Ideas
       - write task descriptions
       - write newly defined variables
 - it would be nice if each phase would provide a number of steps and the best step gets selected automatically
+
+try this:
+- per phase use a predefined number of steps
+- for each step use a heuristic to rate the available algorithms for this step
+- use izip() or itertools.chain() to combine multiple plausible algorithms and select the value of the highest ranked one returning a reasonable value
+  - kind of like a blackboard per step
