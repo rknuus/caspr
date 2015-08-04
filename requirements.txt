@@ -1,5 +1,6 @@
 # Add your requirements here like:
 lxml
+# mock  # for unit testing
 requests
 setuptools>=9.0
-
+testfixtures  # for unit testing
