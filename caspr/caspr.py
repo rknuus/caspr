@@ -2,22 +2,40 @@
 # -*- coding: utf-8 -*-
 
 
-# from caspr import __version__  # TODO(KNR): use to print version when asked with --version
-from caspr.googlesheetgenerator import GoogleSheetGenerator
-import sys
+from googlesheetgenerator import generate
+from tableparser import TableParser
+import argparse
 import logging
+import sys
 
 
 __author__ = "Raphael Knaus"
 __copyright__ = "Raphael Knaus"
 __license__ = "none"
+__version__ = "0.0.1"
+
 
 _logger = logging.getLogger(__name__)
 
 
+def parse_args(args):
+    parser = argparse.ArgumentParser(description="A multi-stage geocaching sheet preparation tool.")
+    parser.add_argument(
+        '-v',
+        '--version',
+        action='version',
+        version='caspr {ver}'.format(ver=__version__))
+    parser.add_argument('cache_codes', action='append', nargs="+",
+                        help="1..N www.geocaching.com cache_codes like GC397CZ")
+    return parser.parse_args(args)
+
+
 def main(args):
-    generator = GoogleSheetGenerator()
-    generator.generate()
+    args = parse_args(args)
+    for codes in args.cache_codes:
+        for code in codes:
+            parser = TableParser(code)
+            generate(parser)
 
 
 def run():
