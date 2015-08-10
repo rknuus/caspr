@@ -5,10 +5,10 @@
 from collections import namedtuple
 
 
-Stage = namedtuple("stage", ["fixed_coordinates"])
+Stage = namedtuple("stage", ["name", "fixed_coordinates"])
 
 
 def stages(parser):
-    for coordinates in parser.coordinates():
-        yield Stage(fixed_coordinates=coordinates)
+    for name, coordinates in zip(parser.names(), parser.coordinates()):
+        yield Stage(name=name, fixed_coordinates=coordinates)
     return
