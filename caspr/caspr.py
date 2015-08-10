@@ -9,7 +9,7 @@ import sys
 
 __author__ = "Raphael Knaus"
 __copyright__ = "Raphael Knaus"
-__license__ = "none"
+__license__ = "gpl3"
 __version__ = "0.0.1"
 
 
