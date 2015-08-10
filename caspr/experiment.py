@@ -7,13 +7,29 @@
 # combine with requests to fetch data from the web, e.g. as in http://docs.python-guide.org/en/latest/scenarios/scrape/
 
 
+from itertools import chain
 from lxml import etree
+from lxml.etree import tostring
 
+
+def stringify_children(node):
+    import pdb; pdb.set_trace()
+    parts = ([node.text] + list(chain(*([c.text, tostring(c), c.tail] for c in node.getchildren()))) + [node.tail])
+    # remove possible Nones in texts and tails
+    return ''.join(filter(None, parts))
+
+
+node = etree.fromstring("""<content>Text outside tag <div>Text <em>inside</em> tag</div></content>""")
+# print(stringify_children(node))
+"".join(x for x in node.itertext())
 
 parser = etree.HTMLParser()
-root = etree.parse("../caspr/sample_data/GC2A62B Seepromenade Luzern [DE_EN] (Multi-cache) in Zentralschweiz (ZG_SZ_LU_UR_OW_NW), Switzerland created by Worlddiver.html", parser)
+root = etree.parse("tests/sample_data/GC2A62B Seepromenade Luzern [DE_EN] (Multi-cache) in Zentralschweiz (ZG_SZ_LU_UR_OW_NW), Switzerland created by Worlddiver.html", parser)
 # stages = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr")
-coordinates = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=7]/text()")
+names = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=6]")
+for i, name in enumerate(names):
+    # print("name ", str(i+1), ": ", stringify_children(name))
+    print("name ", str(i+1), ": ", "".join(x for x in name.itertext()))
 
 
 # how to chain generators:
