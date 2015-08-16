@@ -1,5 +1,5 @@
-# Add your requirements here like:
 google-api-python-client
+gspread
 lxml
 # mock  # for unit testing
 requests
