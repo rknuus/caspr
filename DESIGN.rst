@@ -36,3 +36,6 @@ try this:
 - for each step use a heuristic to rate the available algorithms for this step
 - use izip() or itertools.chain() to combine multiple plausible algorithms and select the value of the highest ranked one returning a reasonable value
   - kind of like a blackboard per step
+- per phase define an interface, e.g. StageProcessing receives the parser object and the list of stages created so far, so that it can update stages
+- for FileProcessing and SheetGeneration not sure whether that makes sense
+- wrap generators into classes, so that they can be passed as constructor arguments or set with a setter, i.e. they are replacable
