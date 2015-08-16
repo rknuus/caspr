@@ -1,4 +1,5 @@
 # Add your requirements here like:
+google-api-python-client
 lxml
 # mock  # for unit testing
 requests
