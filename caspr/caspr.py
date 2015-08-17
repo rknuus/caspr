@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+from geocaching_page import fetch
 from googlesheetgenerator import generate
 from tableparser import TableParser
 import argparse
@@ -34,8 +35,9 @@ def main(args):
     args = parse_args(args)
     for codes in args.cache_codes:
         for code in codes:
-            parser = TableParser(code)
-            generate(parser)
+            page = fetch(code)
+            stage_parser = TableParser(page)
+            generate(stage_parser)
 
 
 def run():
