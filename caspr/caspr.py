@@ -17,7 +17,8 @@ _logger = logging.getLogger(__name__)
 
 
 def _parse_args(args):
-    parser = argparse.ArgumentParser(description="A multi-stage geocaching sheet preparation tool.")
+    parser = argparse.ArgumentParser(description="A multi-stage geocaching sheet preparation tool.",
+                                     epilog="Note that you will be asked for your Google credentials later on.")
     parser.add_argument(
         '-v',
         '--version',
