@@ -16,20 +16,32 @@ __version__ = "0.0.1"
 _logger = logging.getLogger(__name__)
 
 
-def parse_args(args):
+def _parse_args(args):
     parser = argparse.ArgumentParser(description="A multi-stage geocaching sheet preparation tool.")
     parser.add_argument(
         '-v',
         '--version',
         action='version',
-        version='caspr {ver}'.format(ver=__version__))
+        version='%(prog)s {ver}'.format(ver=__version__))
+    parser.add_argument(
+        '-u',
+        '--user',
+        action='store',
+        required=True,
+        help="your geocaching account")
+    parser.add_argument(
+        '-p',
+        '--password',
+        action='store',
+        required=True,
+        help="your geocaching password")
     parser.add_argument('cache_codes', action='append', nargs="+",
                         help="1..N www.geocaching.com cache_codes like GC397CZ")
     return parser.parse_args(args)
 
 
 def main(args):
-    arguments = parse_args(args)
+    arguments = _parse_args(args)
 
 
 def run():
