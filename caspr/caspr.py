@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+from caspr.geocachingdotcom import GeocachingSite
 import argparse
 import logging
 import sys
@@ -43,6 +44,7 @@ def _parse_args(args):
 
 def main(args):
     arguments = _parse_args(args)
+    site = GeocachingSite(arguments.user, arguments.password)
 
 
 def run():

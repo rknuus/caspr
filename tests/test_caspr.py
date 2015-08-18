@@ -5,6 +5,7 @@
 from caspr import caspr
 from contextlib import contextmanager
 from io import StringIO
+import mock
 import sys
 import unittest
 
@@ -28,3 +29,9 @@ class TestCaspr(unittest.TestCase):
 
         self.assertEqual(argparse_exception.exception.code, 2)
         self.assertIn("the following arguments are required: -u/--user, -p/--password, cache_codes", stderr_mock.getvalue())
+
+    @mock.patch('caspr.caspr.GeocachingSite')
+    def test_main_initializes_geocaching_site(self, site_mock):
+        caspr.main("-u foo -p bar ABCDEF".split())
+        self.assertTrue(site_mock.called)
+        self.assertEqual(site_mock.call_args, [('foo', 'bar')])
