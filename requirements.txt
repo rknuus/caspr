@@ -3,5 +3,6 @@ gspread
 lxml
 # mock  # for unit testing
 requests
+responses  # for unit testing to mock requests
 setuptools>=9.0
 testfixtures  # for unit testing
