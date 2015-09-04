@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
+from caspr.casprexception import CasprException
 from lxml import html
 import requests
 
 
 class GeocachingSite:
+    _LOGIN_FAILED_MESSAGE = ("Uh oh. Either your username or password is incorrect. Please try again. If you've "
+                             "forgotten your information")
+
     def __init__(self, user, password):
         self._prepare_session(user, password)
 
@@ -26,5 +29,7 @@ class GeocachingSite:
             'ctl00$ContentBody$btnSignIn': 'Anmelden'  # TODO(KNR): localize...
         }
         session = requests.Session()
-        session.post('https://www.geocaching.com/login/default.aspx', data=payload)
+        login_result = session.post('https://www.geocaching.com/login/default.aspx', data=payload)
+        if GeocachingSite._LOGIN_FAILED_MESSAGE in login_result.text:
+            raise CasprException('Logging in to www.geocaching.com as {0} failed.'.format(user))
         self._session = session

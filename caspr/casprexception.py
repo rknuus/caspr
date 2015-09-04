@@ -1,0 +1,2 @@
+class CasprException(Exception):
+    pass
