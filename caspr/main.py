@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 from caspr.geocachingdotcom import GeocachingSite
 import argparse
 import logging
@@ -42,15 +41,9 @@ def _parse_args(args):
     return parser.parse_args(args)
 
 
-def main(args):
+def main(args, stdout, stderr):
     arguments = _parse_args(args)
-    site = GeocachingSite(arguments.user, arguments.password)
-
-
-def run():
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    main(sys.argv[1:])
-
-
-if __name__ == "__main__":
-    run()
+    try:
+        site = GeocachingSite(arguments.user, arguments.password)
+    except Exception as e:
+        stderr.write(''.join(['Error: ', str(e), '\n']))

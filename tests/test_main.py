@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-from caspr import caspr
+from caspr.main import _parse_args, main
 from contextlib import contextmanager
 from io import StringIO
 import mock
@@ -25,13 +25,15 @@ class TestCaspr(unittest.TestCase):
         stderr_mock = StringIO()
         with mock_stderr(stderr_mock):
             with self.assertRaises(SystemExit) as argparse_exception:
-                caspr._parse_args([])
+                _parse_args([])
 
         self.assertEqual(argparse_exception.exception.code, 2)
         self.assertIn("the following arguments are required: -u/--user, -p/--password, cache_codes", stderr_mock.getvalue())
 
-    @mock.patch('caspr.caspr.GeocachingSite')
+    @mock.patch('caspr.main.GeocachingSite')
     def test_main_initializes_geocaching_site(self, site_mock):
-        caspr.main("-u foo -p bar ABCDEF".split())
+        stdout_mock = StringIO()
+        stderr_mock = StringIO()
+        main("-u foo -p bar ABCDEF".split(), stdout=stdout_mock, stderr=stderr_mock)
         self.assertTrue(site_mock.called)
         self.assertEqual(site_mock.call_args, [('foo', 'bar')])
