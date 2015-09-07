@@ -45,5 +45,9 @@ def main(args, stdout, stderr):
     arguments = _parse_args(args)
     try:
         site = GeocachingSite(arguments.user, arguments.password)
+        # TODO(KNR): can I prevent argparse from returning a list of lists?
+        for codes in arguments.cache_codes:
+            for code in codes:
+                page = site.fetch(code)
     except Exception as e:
         stderr.write(''.join(['Error: ', str(e), '\n']))

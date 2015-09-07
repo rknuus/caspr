@@ -33,3 +33,7 @@ class GeocachingSite:
         if GeocachingSite._LOGIN_FAILED_MESSAGE in login_result.text:
             raise CasprException('Logging in to www.geocaching.com as {0} failed.'.format(user))
         self._session = session
+
+    def fetch(self, code):
+        page = self._session.get('http://www.geocaching.com/geocache/{0}'.format(code))
+        return page.text
