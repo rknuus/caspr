@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from caspr.geocachingdotcom import GeocachingSite
 import argparse
 import logging
-import sys
+
+from caspr.caches import Caches
+from caspr.geocachingdotcom import GeocachingSite
+from caspr.parser import PageParser
 
 
 __author__ = "Raphael Knaus"
@@ -17,6 +19,9 @@ _logger = logging.getLogger(__name__)
 
 
 def _parse_args(args):
+    ''' Well... Parses the arguments.
+
+    Supports 1..N positional parameters as a list of cache codes. '''
     parser = argparse.ArgumentParser(description="A multi-stage geocaching sheet preparation tool.",
                                      epilog="Note that you will be asked for your Google credentials later on.")
     parser.add_argument(
@@ -42,12 +47,13 @@ def _parse_args(args):
 
 
 def main(args, stdout, stderr):
+    ''' Parses the arguments and prepares each cache. '''
     arguments = _parse_args(args)
     try:
-        site = GeocachingSite(arguments.user, arguments.password)
+        site = GeocachingSite(user=arguments.user, password=arguments.password)
+        caches = Caches(site=site, parser=PageParser())
         # TODO(KNR): can I prevent argparse from returning a list of lists?
         for codes in arguments.cache_codes:
-            for code in codes:
-                page = site.fetch(code)
+            caches.prepare(codes=codes)
     except Exception as e:
         stderr.write(''.join(['Error: ', str(e), '\n']))

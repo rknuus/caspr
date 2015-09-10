@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from caspr.casprexception import CasprException
 from lxml import html
 import requests
 
+from caspr.casprexception import CasprException
+
 
 class GeocachingSite:
+    ''' Deals with the www.geocaching.com site. '''
+
     _LOGIN_FAILED_MESSAGE = ("Uh oh. Either your username or password is incorrect. Please try again. If you've "
                              "forgotten your information")
 
@@ -14,6 +17,7 @@ class GeocachingSite:
         self._prepare_session(user, password)
 
     def _prepare_session(self, user, password):
+        ''' Initializes an authentication session, so that following fetch() calls get the full page. '''
         login_page = requests.get('https://www.geocaching.com/login/default.aspx')
         login_root = html.fromstring(login_page.text)
         viewstate = login_root.xpath("//input[@name='__VIEWSTATE']")
@@ -35,5 +39,6 @@ class GeocachingSite:
         self._session = session
 
     def fetch(self, code):
+        ''' Returns the page text of the geocache with the given code. '''
         page = self._session.get('http://www.geocaching.com/geocache/{0}'.format(code))
         return page.text

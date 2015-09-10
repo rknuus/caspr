@@ -2,11 +2,9 @@
 # -*- coding: utf-8 -*-
 
 
-from caspr.main import _parse_args, main
+from caspr.main import _parse_args
 from contextlib import contextmanager
 from io import StringIO
-from unittest.mock import MagicMock
-import mock
 import sys
 import unittest
 
@@ -30,15 +28,3 @@ class TestCaspr(unittest.TestCase):
 
         self.assertEqual(argparse_exception.exception.code, 2)
         self.assertIn("the following arguments are required: -u/--user, -p/--password, cache_codes", stderr_mock.getvalue())
-
-    @mock.patch('caspr.main.GeocachingSite')
-    def test_main_using_geocaching_site(self, site_mock):
-        # site_mock.fetch = MagicMock(return_value='<html></html>')
-        stdout_mock = StringIO()
-        stderr_mock = StringIO()
-        main("-u foo -p bar ABCDEF".split(), stdout=stdout_mock, stderr=stderr_mock)
-        self.assertTrue(site_mock.called)
-        self.assertEqual(site_mock.call_args, [('foo', 'bar')])
-        # self.assertTrue(site_mock.fetch.called)
-        # self.assertEqual(site_mock.fetch.call_args, [('ABCDEF')])
-        self.assertEqual(str(site_mock.mock_calls[1]), "call().fetch('ABCDEF')")  # TODO(KNR): ugh... Why fetch.called is not properly set?

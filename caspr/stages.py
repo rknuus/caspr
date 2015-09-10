@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 
-from collections import namedtuple
+class Stages(object):
+    '''
+    Holds all data extracted by the parser and generates a sheet from those data.
 
+    Currently supports Google Docs Sheet as output format.
+    '''
 
-Stage = namedtuple("stage", ["fixed_coordinates"])
-
-
-def stages(parser):
-    for coordinates in parser.coordinates():
-        yield Stage(fixed_coordinates=coordinates)
-    return
+    def generate_sheet(self):
+        ''' From the stored data generate a sheet. '''
+        pass
