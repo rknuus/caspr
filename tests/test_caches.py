@@ -6,13 +6,13 @@ from unittest.mock import call, MagicMock
 import unittest
 
 from caspr.caches import Caches
-from caspr.parser import PageParser
+from caspr.geocachingdotcom import PageParser
 from caspr.stages import Stages
 
 
 class TestCaches(unittest.TestCase):
     @mock.patch('caspr.geocachingdotcom.GeocachingSite')
-    @mock.patch('caspr.parser.PageParser')
+    @mock.patch('caspr.geocachingdotcom.PageParser')
     @mock.patch('caspr.stages.Stages')
     def test_prepares_a_cache(self, stages_mock, parser_mock, site_mock):
         site_mock.fetch = MagicMock(return_value='<html></html>')

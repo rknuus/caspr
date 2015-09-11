@@ -5,8 +5,7 @@ import argparse
 import logging
 
 from caspr.caches import Caches
-from caspr.geocachingdotcom import GeocachingSite
-from caspr.parser import PageParser
+from caspr.geocachingdotcom import GeocachingSite, PageParser
 
 
 __author__ = "Raphael Knaus"

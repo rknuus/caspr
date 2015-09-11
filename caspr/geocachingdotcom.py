@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from lxml import html
+from io import StringIO
+from lxml import etree, html
 import requests
 
+from caspr.stages import Stages
 from caspr.casprexception import CasprException
 
 
@@ -42,3 +44,34 @@ class GeocachingSite:
         ''' Returns the page text of the geocache with the given code. '''
         page = self._session.get('http://www.geocaching.com/geocache/{0}'.format(code))
         return page.text
+
+
+class _TableParser:
+    ''' Parses the table of a geocache page. '''
+
+    def parse(self, input):
+        '''
+        input can be either a filename or an URL of the page to be parsed.
+        '''
+        self._root = etree.parse(input, etree.HTMLParser())
+
+    def coordinates(self):
+        # TODO(KNR): check if we have to wrap the return value with iter()
+        return self._root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=7]/text()")
+
+
+class PageParser:
+    '''
+    Parses a geocache page.
+
+    Currently just supports parsing of the cache table.
+
+    Later on will be able to parse the text section, and even to combine the text and table results.
+    '''
+
+    def __init__(self, table_parser):
+        self._table_parser = table_parser
+
+    def parse(self, page):
+        self._table_parser.parse(StringIO(page))
+        return Stages()

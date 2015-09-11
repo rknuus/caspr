@@ -8,7 +8,7 @@ import unittest
 
 
 class TestGoogleSheetGenerator(unittest.TestCase):
-    @patch('caspr.stages.stages')
+    @patch('caspr.stages.Stages')
     def test_generate_calls_stages(self, stages_mock):
         generator = GoogleSheetGenerator()
         generator.generate()

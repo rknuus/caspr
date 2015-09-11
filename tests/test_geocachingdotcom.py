@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from caspr.casprexception import CasprException
-from caspr.geocachingdotcom import GeocachingSite
 from urllib.parse import quote_plus
+import os
 import unittest
 import responses
+
+from caspr.casprexception import CasprException
+from caspr.geocachingdotcom import GeocachingSite, PageParser, _TableParser
 
 
 def _urlencode_parameter(name, value):
@@ -52,3 +54,32 @@ class TestCaspr(unittest.TestCase):
         site.fetch('ABCDEF')
         self.assertEqual(len(responses.calls), 3)
         self.assertEqual(responses.calls[2].request.url, 'http://www.geocaching.com/geocache/ABCDEF')
+
+
+class TestParser(unittest.TestCase):
+    @unittest.skip('TEMPORARILY')
+    def test_get_coordinates(self):
+        path = os.path.join(os.path.dirname(__file__), "sample_data/GC2A62B Seepromenade Luzern [DE_EN] (Multi-cache) "
+                            "in Zentralschweiz (ZG_SZ_LU_UR_OW_NW), Switzerland created by Worlddiver.html")
+        table_parser = _TableParser()
+        parser = PageParser(table_parser)
+        with open(path) as file:
+            stages = parser.parse(file.read())
+
+        self.assertEqual(stages._coordinates(), ['N 47° 03.204 E 008° 18.557', '', '', '', '', '', '', ''])
+
+
+class TestTableParser(unittest.TestCase):
+    def test_get_coordinates(self):
+        path = os.path.join(os.path.dirname(__file__), "sample_data/GC2A62B Seepromenade Luzern [DE_EN] (Multi-cache) "
+                            "in Zentralschweiz (ZG_SZ_LU_UR_OW_NW), Switzerland created by Worlddiver.html")
+        table_parser = _TableParser()
+        table_parser.parse(path)
+        self.assertEqual(table_parser.coordinates(), ['\n                N 47° 03.204 E 008° 18.557\xa0\n\n            ',
+                                                      '\n                ???\xa0\n\n            ',
+                                                      '\n                ???\xa0\n\n            ',
+                                                      '\n                ???\xa0\n\n            ',
+                                                      '\n                ???\xa0\n\n            ',
+                                                      '\n                ???\xa0\n\n            ',
+                                                      '\n                ???\xa0\n\n            ',
+                                                      '\n                ???\xa0\n\n            '])
