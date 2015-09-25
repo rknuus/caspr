@@ -9,7 +9,7 @@ from caspr.caches import Caches
 
 class TestCaches(unittest.TestCase):
     @patch('caspr.geocachingdotcom.GeocachingSite')
-    @patch('caspr.geocachingdotcom._PageParser')  # TODO(KNR): replace by factory
+    @patch('caspr.geocachingdotcom.PageParser')  # TODO(KNR): replace by factory
     @patch('caspr.googledotcom.GoogleSheet')
     def test_prepares_a_cache(self, generator_mock, parser_mock, site_mock):
         site_mock.fetch = MagicMock(return_value='<html></html>')

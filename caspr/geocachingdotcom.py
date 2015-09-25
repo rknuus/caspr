@@ -46,13 +46,15 @@ class GeocachingSite:
         return page.text
 
 
-class _TableParser:
+class TableParser:
     ''' Parses the table of a geocache page. '''
 
     def parse(self, input):
         '''
         input can be either a filename or an URL of the page to be parsed.
         '''
+        # TODO(KNR): does defusedxml also work?
+        # TODO(KNR): does etree provide iterparse()?
         self._root = etree.parse(source=input, parser=etree.HTMLParser())
         # TODO(KNR): check if we have to wrap the return value with iter()
         self._coordinates = self._root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=7]/text()")
@@ -63,7 +65,7 @@ class _TableParser:
             yield coordinate
 
 
-class _PageParser:
+class PageParser:
     '''
     Parses a geocache page.
 
@@ -83,7 +85,3 @@ class _PageParser:
     def _generator(self):
         for stage in self._data:
             yield Stage(stage.cordinates())
-
-class Factory:
-    def create_parser(self):
-        return _PageParser(table_parser=_TableParser())

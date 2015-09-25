@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from unittest.mock import call, MagicMock, patch
+from unittest.mock import MagicMock, patch
 from urllib.parse import quote_plus
 import os
 import unittest
 import responses
 
 from caspr.casprexception import CasprException
-from caspr.geocachingdotcom import GeocachingSite, _PageParser, _TableParser
-from caspr.stage import Stage
+from caspr.geocachingdotcom import GeocachingSite, PageParser, TableParser
+
 
 _SAMPLE_TABLE_PATH = ('sample_data/GC2A62B Seepromenade Luzern [DE_EN] (Multi-cache) in Zentralschweiz '
                       '(ZG_SZ_LU_UR_OW_NW), Switzerland created by Worlddiver.html')
@@ -65,7 +65,7 @@ class TestParser(unittest.TestCase):
     @unittest.skip('TEMPORARILY')
     def test_get_coordinates(self):
         path = os.path.join(os.path.dirname(__file__), _SAMPLE_TABLE_PATH)
-        table_parser = _TableParser()
+        table_parser = TableParser()
         parser = GoogleSheet(table_parser)
         with open(path) as file:
             stages = parser.parse(file.read())
@@ -75,7 +75,7 @@ class TestParser(unittest.TestCase):
     def test_no_iteration_if_data_empty(self):
         data_mock = MagicMock()
         data_mock.__iter__.side_effect = []
-        parser = _PageParser(data_mock)
+        parser = PageParser(data_mock)
         stages = parser.parse('')
         entered = False
         for stage in stages:
@@ -88,7 +88,7 @@ class TestParser(unittest.TestCase):
         stage_mock.coordinates.side_effect = ['1']
         data_mock = MagicMock()
         data_mock.__iter__.return_value = iter([stage_mock])
-        parser = _PageParser(None)
+        parser = PageParser(None)
         parser._data = data_mock  # set _data directly instead of calling parse(), which is a bit cheesy
         stages = parser._generator()
         li = list(stages)
@@ -107,7 +107,7 @@ class TestTableParser(unittest.TestCase):
         expected_coordinates = []
         dom_mock.xpath = MagicMock(return_value=expected_coordinates)
         etree_mock.parse = MagicMock(return_value=dom_mock)
-        parser = _TableParser()
+        parser = TableParser()
         stages = parser.parse('')
         entered = False
         for stage in stages:
@@ -121,7 +121,7 @@ class TestTableParser(unittest.TestCase):
         expected_coordinates = ['\n                N 47° 03.204 E 008° 18.557\xa0\n\n            ']
         dom_mock.xpath = MagicMock(return_value=expected_coordinates)
         etree_mock.parse = MagicMock(return_value=dom_mock)
-        table_parser = _TableParser()
+        table_parser = TableParser()
         coordinates = table_parser.parse('<html></html>')
         self.assertTrue(etree_mock.parse.called)
         etree_mock.parse.assert_called_with(source='<html></html>', parser=Anything())
@@ -129,7 +129,7 @@ class TestTableParser(unittest.TestCase):
 
     def test_get_coordinates(self):
         path = os.path.join(os.path.dirname(__file__), _SAMPLE_TABLE_PATH)
-        table_parser = _TableParser()
+        table_parser = TableParser()
         table_parser.parse(path)
         self.assertEqual(table_parser._coordinates,
                          ['\n                N 47° 03.204 E 008° 18.557\xa0\n\n            ',
