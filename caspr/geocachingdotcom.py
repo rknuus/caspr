@@ -6,6 +6,7 @@ from lxml import etree, html
 import requests
 
 from caspr.casprexception import CasprException
+from caspr.coordinatefilter import CoordinateFilter
 from caspr.stage import Stage
 
 
@@ -62,7 +63,7 @@ class TableParser:
 
     def _generator(self):
         for coordinate in self._coordinates:
-            yield coordinate
+            yield CoordinateFilter.filter(coordinate)
 
 
 class PageParser:

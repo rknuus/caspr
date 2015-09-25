@@ -12,6 +12,11 @@ class TestCoordinateFilter(unittest.TestCase):
         for input, output in inputs_outputs.items():
             self.assertEquals(CoordinateFilter.filter(input), output)
 
+    def test_non_coordinates_yield_empty(self):
+        inputs_outputs = {'\n                ???\xa0\n\n            ': None}
+        for input, output in inputs_outputs.items():
+            self.assertEquals(CoordinateFilter.filter(input), output)
+
 # TESTLIST:
 # - coordinates_in_wgs84_decimal
 # - coordinates_in_wgs84_with_minutes_and_seconds
