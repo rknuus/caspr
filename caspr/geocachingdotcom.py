@@ -5,8 +5,8 @@ from io import StringIO
 from lxml import etree, html
 import requests
 
-from caspr.stages import Stages
 from caspr.casprexception import CasprException
+from caspr.stage import Stage
 
 
 class GeocachingSite:
@@ -53,14 +53,17 @@ class _TableParser:
         '''
         input can be either a filename or an URL of the page to be parsed.
         '''
-        self._root = etree.parse(input, etree.HTMLParser())
-
-    def coordinates(self):
+        self._root = etree.parse(source=input, parser=etree.HTMLParser())
         # TODO(KNR): check if we have to wrap the return value with iter()
-        return self._root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=7]/text()")
+        self._coordinates = self._root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=7]/text()")
+        return self._generator()
+
+    def _generator(self):
+        for coordinate in self._coordinates:
+            yield coordinate
 
 
-class PageParser:
+class _PageParser:
     '''
     Parses a geocache page.
 
@@ -71,7 +74,16 @@ class PageParser:
 
     def __init__(self, table_parser):
         self._table_parser = table_parser
+        self._data = iter([])
 
     def parse(self, page):
-        self._table_parser.parse(StringIO(page))
-        return Stages()
+        self._data = self._table_parser.parse(StringIO(page))
+        return self._generator()
+
+    def _generator(self):
+        for stage in self._data:
+            yield Stage(stage.cordinates())
+
+class Factory:
+    def create_parser(self):
+        return _PageParser(table_parser=_TableParser())

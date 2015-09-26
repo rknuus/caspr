@@ -5,7 +5,8 @@ import argparse
 import logging
 
 from caspr.caches import Caches
-from caspr.geocachingdotcom import GeocachingSite, PageParser
+from caspr.geocachingdotcom import GeocachingSite, Factory
+from caspr.googledotcom import GoogleSheet
 
 
 __author__ = "Raphael Knaus"
@@ -14,6 +15,7 @@ __license__ = "gpl3"
 __version__ = "0.0.1"
 
 
+# TODO(KNR): use logging
 _logger = logging.getLogger(__name__)
 
 
@@ -49,8 +51,9 @@ def main(args, stdout, stderr):
     ''' Parses the arguments and prepares each cache. '''
     arguments = _parse_args(args)
     try:
+        factory = Factory()
         site = GeocachingSite(user=arguments.user, password=arguments.password)
-        caches = Caches(site=site, parser=PageParser())
+        caches = Caches(site=site, parser=factory.create_parser(), generator=GoogleSheet())
         # TODO(KNR): can I prevent argparse from returning a list of lists?
         for codes in arguments.cache_codes:
             caches.prepare(codes=codes)
