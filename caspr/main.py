@@ -5,7 +5,7 @@ import argparse
 import logging
 
 from caspr.caches import Caches
-from caspr.geocachingdotcom import GeocachingSite, PageParser
+from caspr.geocachingdotcom import GeocachingSite, PageParser, TableParser
 from caspr.googledotcom import GoogleSheet
 
 

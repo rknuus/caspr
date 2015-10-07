@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from io import StringIO
-from lxml import etree, html
+from lxml import html
 import requests
+import tempfile
 
 from caspr.casprexception import CasprException
 from caspr.coordinatefilter import CoordinateFilter
@@ -22,7 +22,7 @@ class GeocachingSite:
     def _prepare_session(self, user, password):
         ''' Initializes an authentication session, so that following fetch() calls get the full page. '''
         login_page = requests.get('https://www.geocaching.com/login/default.aspx')
-        login_root = html.fromstring(login_page.text)
+        login_root = html.fromstring(html=login_page.text)
         viewstate = login_root.xpath("//input[@name='__VIEWSTATE']")
         viewstategenerator = login_root.xpath("//input[@name='__VIEWSTATEGENERATOR']")
         payload = {
@@ -44,7 +44,10 @@ class GeocachingSite:
     def fetch(self, code):
         ''' Returns the page text of the geocache with the given code. '''
         page = self._session.get('http://www.geocaching.com/geocache/{0}'.format(code))
-        return page.text
+        # TODO(KNR): why the heck does it not work when passing page.text to the lxml.html parser?! Probably some encoding issue
+        with tempfile.NamedTemporaryFile(delete=False) as file:
+            file.write(bytes(page.text, 'UTF-8'))
+            return file.name
 
 
 class TableParser:
@@ -58,7 +61,7 @@ class TableParser:
         '''
         # TODO(KNR): does defusedxml also work?
         # TODO(KNR): does etree provide iterparse()?
-        self._root = etree.parse(source=input, parser=etree.HTMLParser())
+        self._root = html.parse(filename_or_url=input)
         self._coordinates = self._root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=7]/text()")
         return self._generator()
 
@@ -86,7 +89,7 @@ class PageParser:
 
         page can be either a filename or an URL of the page to be parsed.
         '''
-        self._data = self._table_parser.parse(StringIO(page))
+        self._data = self._table_parser.parse(input=page)
         return self._generator()
 
     def _generator(self):

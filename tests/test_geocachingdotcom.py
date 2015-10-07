@@ -11,7 +11,6 @@ from caspr.casprexception import CasprException
 from caspr.geocachingdotcom import GeocachingSite, PageParser, TableParser
 from caspr.stage import Stage
 
-
 _SAMPLE_TABLE_PATH = ('sample_data/GC2A62B Seepromenade Luzern [DE_EN] (Multi-cache) in Zentralschweiz '
                       '(ZG_SZ_LU_UR_OW_NW), Switzerland created by Worlddiver.html')
 
@@ -94,24 +93,19 @@ class TestPageParser(unittest.TestCase):
         self.assertEqual(stages._coordinates(), ['N 47° 03.204 E 008° 18.557', '', '', '', '', '', '', ''])
 
 
-class Anything:
-    def __eq__(self, other):
-        return True
-
-
 class TestTableParser(unittest.TestCase):
-    @patch('caspr.geocachingdotcom.etree')
-    def test_parse_calls_etree_xpath(self, etree_mock):
+    @patch('caspr.geocachingdotcom.html')
+    def test_parse_calls_html_xpath(self, html_mock):
         table_parser = TableParser()
-        table_parser.parse('irrelevant')
-        self.assertTrue(etree_mock.parse.called)
-        etree_mock.parse.assert_called_with(source='irrelevant', parser=Anything())
+        table_parser.parse(input='irrelevant')
+        self.assertTrue(html_mock.parse.called)
+        html_mock.parse.assert_called_with(filename_or_url='irrelevant')
 
-    @patch('caspr.geocachingdotcom.etree')
-    def test_no_iteration_if_data_empty(self, etree_mock):
+    @patch('caspr.geocachingdotcom.html')
+    def test_no_iteration_if_data_empty(self, html_mock):
         dom_mock = MagicMock()
         dom_mock.xpath = MagicMock(return_value=[])
-        etree_mock.parse = MagicMock(return_value=dom_mock)
+        html_mock.parse = MagicMock(return_value=dom_mock)
         parser = TableParser()
         actual = parser.parse('')
         self.assertEqual(len(list(actual)), 0)
@@ -127,13 +121,16 @@ class TestTableParser(unittest.TestCase):
     def test_parse_sets_raw_coordinates_of_sample_file(self):
         path = os.path.join(os.path.dirname(__file__), _SAMPLE_TABLE_PATH)
         table_parser = TableParser()
-        table_parser.parse(path)
+        table_parser.parse(input=path)
         self.assertEqual(table_parser._coordinates,
-                         ['\n                N 47° 03.204 E 008° 18.557\xa0\n\n            ',
-                          '\n                ???\xa0\n\n            ', '\n                ???\xa0\n\n            ',
-                          '\n                ???\xa0\n\n            ', '\n                ???\xa0\n\n            ',
-                          '\n                ???\xa0\n\n            ', '\n                ???\xa0\n\n            ',
-                          '\n                ???\xa0\n\n            '])
+                         ['\n                N 47° 03.204 E 008° 18.557\xa0\n                \n            ',
+                          '\n                ???\xa0\n                \n            ',
+                          '\n                ???\xa0\n                \n            ',
+                          '\n                ???\xa0\n                \n            ',
+                          '\n                ???\xa0\n                \n            ',
+                          '\n                ???\xa0\n                \n            ',
+                          '\n                ???\xa0\n                \n            ',
+                          '\n                ???\xa0\n                \n            '])
 
 
 if __name__ == "__main__":
