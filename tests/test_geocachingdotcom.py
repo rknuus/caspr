@@ -64,8 +64,9 @@ class TestCaspr(unittest.TestCase):
 class TestPageParser(unittest.TestCase):
     def test_parse_calls_parse_on_table_parser(self):
         table_parser_mock = MagicMock()
+        table_parser_mock.parse.return_value = ('irrelevant', [])
         parser = PageParser(table_parser=table_parser_mock)
-        parser.parse('irrelevant')
+        parser.parse(page='irrelevant')
         self.assertTrue(table_parser_mock.parse.called)
 
     def test_no_iteration_if_data_empty(self):
@@ -97,8 +98,8 @@ class TestTableParser(unittest.TestCase):
         dom_mock.xpath = MagicMock(return_value=[])
         html_mock.parse = MagicMock(return_value=dom_mock)
         parser = TableParser()
-        actual = parser.parse('')
-        self.assertEqual(len(list(actual)), 0)
+        name, stages = parser.parse('')
+        self.assertEqual(len(list(stages)), 0)
 
     @patch('caspr.geocachingdotcom.CoordinateFilter')
     def test_generator_calls_filter(self, coordinate_filter_mock):

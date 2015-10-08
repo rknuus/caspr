@@ -13,8 +13,9 @@ class TestCaches(unittest.TestCase):
     @patch('caspr.googledotcom.GoogleSheet')
     def test_prepares_a_cache(self, generator_mock, parser_mock, site_mock):
         code = 'ABCDEF'
+        name = 'foo'
         site_mock.fetch = MagicMock(return_value='<html></html>')
-        parser_mock.parse = MagicMock(return_value=parser_mock)
+        parser_mock.parse = MagicMock(return_value=(name, parser_mock))
 
         caches = Caches(site=site_mock, parser=parser_mock, generator=generator_mock)
         caches.prepare([code])
@@ -26,4 +27,4 @@ class TestCaches(unittest.TestCase):
         self.assertEqual(parser_mock.mock_calls, [call.parse(page=site_mock.fetch.return_value)])
 
         self.assertTrue(generator_mock.generate.called)
-        self.assertEqual(generator_mock.mock_calls, [call.generate(code=code, stages=parser_mock.parse.return_value)])
+        self.assertEqual(generator_mock.mock_calls, [call.generate(name=name, stages=parser_mock)])

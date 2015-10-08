@@ -18,9 +18,9 @@ class Caches:
         ''' Fetches the page for each geocaching code, parses it, and generates a sheet. '''
         for code in codes:
             page = self._site.fetch(code=code)
-            stages = self._parser.parse(page=page)
+            name, stages = self._parser.parse(page=page)
             self._delete_page_if_file(page=page)
-            self._generator.generate(code=code, stages=stages)
+            self._generator.generate(name=name, stages=stages)
 
     def _delete_page_if_file(self, page):
         if path.exists(path.basename(page)):

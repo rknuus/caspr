@@ -62,10 +62,12 @@ class TableParser:
         # TODO(KNR): does defusedxml also work?
         # TODO(KNR): does etree provide iterparse()?
         root = html.parse(filename_or_url=input)
-        name_nodes = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=6]")
-        self._names = [''.join(x for x in n.itertext()) for n in name_nodes]
+        cache_name_nodes = root.xpath("//title[position()=1]/text()")
+        cache_name = cache_name_nodes[0].strip() if len(cache_name_nodes) > 0 else ''
+        stage_name_nodes = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=6]")
+        self._names = [''.join(x for x in n.itertext()) for n in stage_name_nodes]
         self._coordinates = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=7]/text()")
-        return self._generator()
+        return cache_name, self._generator()
 
     def _generator(self):
         for name, coordinates in zip(self._names, self._coordinates):
@@ -82,6 +84,7 @@ class PageParser:
     '''
 
     def __init__(self, table_parser):
+        ''' Initializes the parser with a TableParser. '''
         self._table_parser = table_parser
         self._data = iter([])
 
@@ -91,8 +94,8 @@ class PageParser:
 
         page can be either a filename or an URL of the page to be parsed.
         '''
-        self._data = self._table_parser.parse(input=page)
-        return self._generator()
+        self._name, self._data = self._table_parser.parse(input=page)
+        return self._name, self._generator()
 
     def _generator(self):
         for entry in self._data:

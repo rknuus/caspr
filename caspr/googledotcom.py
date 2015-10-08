@@ -38,12 +38,12 @@ class GoogleSheet:
         self._service = discovery.build('drive', 'v2', http=self._http)
         self._spreadsheets = gspread.authorize(self._credentials)
 
-    def generate(self, code, stages):
+    def generate(self, name, stages):
         ''' Generates a sheet from stages. '''
 
-        worksheet = self._get_sheet(name=code)
+        worksheet = self._get_sheet(name=name)
         if not worksheet:
-            worksheet = self._create_new_sheet(name=code)
+            worksheet = self._create_new_sheet(name=name)
         sheet = worksheet.sheet1
         for stage_number, stage in enumerate(stages):
             index = stage_number + 1

@@ -28,7 +28,7 @@ class TestGoogleSheet(unittest.TestCase):
         sheet._service.files = MagicMock()
         worksheet_mock = MagicMock()
         sheet._spreadsheets.open.side_effect = [gspread.SpreadsheetNotFound, worksheet_mock]
-        sheet.generate(code='GCFOO', stages=[])
+        sheet.generate(name='GCFOO', stages=[])
         self.assertTrue(sheet._service.files.called)
         self.assertEqual(sheet._service.files.mock_calls, [
             call(), call().insert(body={'mimeType': 'application/vnd.google-apps.spreadsheet',
@@ -40,14 +40,14 @@ class TestGoogleSheet(unittest.TestCase):
         worksheet_mock = MagicMock()
         sheet._spreadsheets.open = MagicMock(return_value=worksheet_mock)
         sheet._service.files = MagicMock()
-        sheet.generate(code='GCFOO', stages=[])
+        sheet.generate(name='GCFOO', stages=[])
         self.assertFalse(sheet._service.files.called)
 
     def test_generate_fills_in_a_stage(self):
         sheet = GoogleSheetFake()
         worksheet_mock = MagicMock()
         sheet._spreadsheets.open = MagicMock(return_value=worksheet_mock)
-        sheet.generate(code='GCFOO', stages=[Stage(name='irrelevant', coordinates='irrelevant')])
+        sheet.generate(name='GCFOO', stages=[Stage(name='irrelevant', coordinates='irrelevant')])
         self.assertEqual(worksheet_mock.mock_calls, [call.__bool__(), call.sheet1.update_acell('A1', 'irrelevant'),
                                                      call.sheet1.update_acell('B1', 'irrelevant')])
 
