@@ -47,8 +47,8 @@ class TestGoogleSheet(unittest.TestCase):
         sheet = GoogleSheetFake()
         worksheet_mock = MagicMock()
         sheet._spreadsheets.open = MagicMock(return_value=worksheet_mock)
-        sheet.generate(code='GCFOO', stages=[Stage(coordinates='irrelevant')])
-        self.assertEqual(worksheet_mock.mock_calls, [call.__bool__(), call.sheet1.update_acell('A1', 'Stage # 1'),
+        sheet.generate(code='GCFOO', stages=[Stage(name='irrelevant', coordinates='irrelevant')])
+        self.assertEqual(worksheet_mock.mock_calls, [call.__bool__(), call.sheet1.update_acell('A1', 'irrelevant'),
                                                      call.sheet1.update_acell('B1', 'irrelevant')])
 
     # TODO(KNR): test the entire authentication

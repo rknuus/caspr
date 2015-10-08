@@ -4,4 +4,4 @@
 from collections import namedtuple
 
 
-Stage = namedtuple("stage", ["coordinates"])
+Stage = namedtuple('stage', ['name', 'coordinates'])

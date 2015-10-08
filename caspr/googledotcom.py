@@ -47,7 +47,7 @@ class GoogleSheet:
         sheet = worksheet.sheet1
         for stage_number, stage in enumerate(stages):
             index = stage_number + 1
-            sheet.update_acell('A{0}'.format(index), 'Stage # {0}'.format(index))
+            sheet.update_acell('A{0}'.format(index), stage.name)
             sheet.update_acell('B{0}'.format(index), stage.coordinates)
 
     def _get_sheet(self, name):

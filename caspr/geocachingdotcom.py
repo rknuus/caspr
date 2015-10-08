@@ -61,13 +61,15 @@ class TableParser:
         '''
         # TODO(KNR): does defusedxml also work?
         # TODO(KNR): does etree provide iterparse()?
-        self._root = html.parse(filename_or_url=input)
-        self._coordinates = self._root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=7]/text()")
+        root = html.parse(filename_or_url=input)
+        name_nodes = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=6]")
+        self._names = [''.join(x for x in n.itertext()) for n in name_nodes]
+        self._coordinates = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=7]/text()")
         return self._generator()
 
     def _generator(self):
-        for coordinates in self._coordinates:
-            yield CoordinateFilter.filter(coordinates)
+        for name, coordinates in zip(self._names, self._coordinates):
+            yield {'name': name.strip(), 'coordinates': CoordinateFilter.filter(coordinates)}
 
 
 class PageParser:
@@ -94,4 +96,4 @@ class PageParser:
 
     def _generator(self):
         for entry in self._data:
-            yield Stage(coordinates=entry)
+            yield Stage(name=entry['name'], coordinates=entry['coordinates'])

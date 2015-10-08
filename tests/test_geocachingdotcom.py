@@ -77,20 +77,10 @@ class TestPageParser(unittest.TestCase):
 
     def test_generator_iterates_over_data_once(self):
         parser = PageParser(table_parser=None)
-        parser._data = iter(['irrelevant'])
+        parser._data = iter([{'name': 'irrelevant', 'coordinates': 'irrelevant'}])
         generator = parser._generator()
         actual = list(generator)
-        self.assertEqual([Stage(coordinates='irrelevant')], actual)
-
-    @unittest.skip('TEMPORARILY')
-    def test_get_coordinates(self):
-        path = os.path.join(os.path.dirname(__file__), _SAMPLE_TABLE_PATH)
-        table_parser = TableParser()
-        parser = GoogleSheet(table_parser)
-        with open(path) as file:
-            stages = parser.parse(file.read())
-
-        self.assertEqual(stages._coordinates(), ['N 47° 03.204 E 008° 18.557', '', '', '', '', '', '', ''])
+        self.assertEqual([Stage(name='irrelevant', coordinates='irrelevant')], actual)
 
 
 class TestTableParser(unittest.TestCase):
@@ -113,6 +103,7 @@ class TestTableParser(unittest.TestCase):
     @patch('caspr.geocachingdotcom.CoordinateFilter')
     def test_generator_calls_filter(self, coordinate_filter_mock):
         table_parser = TableParser()
+        table_parser._names = ['irrelevant']
         table_parser._coordinates = ['irrelevant']
         generator = table_parser._generator()
         list(generator)
@@ -122,6 +113,15 @@ class TestTableParser(unittest.TestCase):
         path = os.path.join(os.path.dirname(__file__), _SAMPLE_TABLE_PATH)
         table_parser = TableParser()
         table_parser.parse(input=path)
+        self.assertEqual(table_parser._names,
+                         ['\n                Stage 1: Schwanenplatz (Virtuelle Station)\n            ',
+                          '\n                Stage 2: Pavillion (Virtuelle Station)\n            ',
+                          '\n                Stage 3: Restaurant (Virtuelle Station)\n            ',
+                          '\n                Stage 4: Palace (Virtuelle Station)\n            ',
+                          '\n                Stage 5: Park (Virtuelle Station)\n            ',
+                          '\n                Stage 6: Abkühlung (Virtuelle Station)\n            ',
+                          '\n                Stage 7: Dichter und Patriot (Virtuelle Station)\n            ',
+                          '\n                Stage 8: Guisan (Virtuelle Station)\n            '])
         self.assertEqual(table_parser._coordinates,
                          ['\n                N 47° 03.204 E 008° 18.557\xa0\n                \n            ',
                           '\n                ???\xa0\n                \n            ',
