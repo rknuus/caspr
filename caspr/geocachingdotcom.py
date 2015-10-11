@@ -99,4 +99,4 @@ class PageParser:
 
     def _generator(self):
         for entry in self._data:
-            yield Stage(name=entry['name'], coordinates=entry['coordinates'])
+            yield Stage(name=entry['name'], coordinates=entry['coordinates'], tasks={})

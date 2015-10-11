@@ -78,10 +78,10 @@ class TestPageParser(unittest.TestCase):
 
     def test_generator_iterates_over_data_once(self):
         parser = PageParser(table_parser=None)
-        parser._data = iter([{'name': 'irrelevant', 'coordinates': 'irrelevant'}])
+        parser._data = iter([{'name': 'irrelevant', 'coordinates': 'irrelevant', 'tasks': {}}])
         generator = parser._generator()
         actual = list(generator)
-        self.assertEqual([Stage(name='irrelevant', coordinates='irrelevant')], actual)
+        self.assertEqual([Stage(name='irrelevant', coordinates='irrelevant', tasks={})], actual)
 
 
 class TestTableParser(unittest.TestCase):

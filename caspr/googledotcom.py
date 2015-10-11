@@ -45,10 +45,20 @@ class GoogleSheet:
         if not worksheet:
             worksheet = self._create_new_sheet(name=name)
         sheet = worksheet.sheet1
+        index = 0
         for stage_number, stage in enumerate(stages):
-            index = stage_number + 1
+            index += 1
             sheet.update_acell('A{0}'.format(index), stage.name)
             sheet.update_acell('B{0}'.format(index), stage.coordinates)
+            for task in stage.tasks:
+                task_index = index
+                index += 1
+                sheet.update_acell('A{0}'.format(index), task['description'])
+                for variable in task['variables']:
+                    task_index += 1
+                    sheet.update_acell('B{0}'.format(task_index), variable)
+                if task_index > index:
+                    index = task_index
 
     def _get_sheet(self, name):
         try:
