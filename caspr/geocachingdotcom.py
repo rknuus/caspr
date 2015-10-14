@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 
 from lxml import html
+import re
 import requests
 import tempfile
 
 from caspr.casprexception import CasprException
 from caspr.coordinatefilter import CoordinateFilter
-from caspr.stage import Stage
+from caspr.stage import Stage, Task
 
 
 class GeocachingSite:
@@ -50,6 +51,32 @@ class GeocachingSite:
             return file.name
 
 
+class DescriptionParser:
+    def __init__(self):
+        # The following regular expression has some drawbacks:
+        # - It might mistake declarations like A = 1, B = 2 etc. for variable definitions.
+        # - If the same variable is defined multiple times (e.g. in multiple languages), it's not clear what to do.
+        # - It depends on newlines. It's not sure whether all cache authors use newlines.
+        self._assignment_re = re.compile('([A-Z]+ =)|\n')  # TODO(KNR: hard coded for now, but must be determined from data
+        self._items = []
+
+    def parse(self, description):
+        self._items = filter(None, self._assignment_re.split(description))
+        return self._generator()
+
+    def _generator(self):
+        # items = ['                Halte nach einem grossen Schriftzug mit einer Krone Ausschau.', 'A = ', 'wieviele Zacken hat die Krone?', 'BCDEF = ', 'wandle den Namen nach dem System A=1, B=2... um', 'Look ou
+        # t for a big lettering with a crown.', 'A = ', 'amount of spikes of the crown', 'BCDEF = ', 'transform the name according to the system A=1, B=2...', '__________________________________________',
+        # 'Rechne / ', 'calculate:', 'N 47° [ B - C ].[ B x F - E x F - 3 x C ]', 'E 008° [ B ].[ F x ( B + D + 2 ) + B + 2 ]', '            ']
+        variables = ''
+        for item in self._items:
+            if self._assignment_re.match(item):
+                variables = item.replace('=', '').strip()
+            elif variables:
+                yield Task(description=item.strip(), variables=variables)
+                variables = ''
+
+
 class TableParser:
     ''' Parses the table of a geocache page. '''
 
@@ -65,13 +92,19 @@ class TableParser:
         cache_name_nodes = root.xpath("//title[position()=1]/text()")
         cache_name = cache_name_nodes[0].strip() if len(cache_name_nodes) > 0 else ''
         stage_name_nodes = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=6]")
-        self._names = [''.join(x for x in n.itertext()) for n in stage_name_nodes]
+        self._names = [''.join(x for x in n.itertext()) for n in stage_name_nodes]  # TODO(KNR): huh?
         self._coordinates = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=7]/text()")
+        description_nodes = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=3]")
+        self._descriptions = ['\n'.join(n.itertext()) for n in description_nodes if n.text.strip()]
         return cache_name, self._generator()
 
     def _generator(self):
-        for name, coordinates in zip(self._names, self._coordinates):
-            yield {'name': name.strip(), 'coordinates': CoordinateFilter.filter(coordinates)}
+        for name, coordinates, description in zip(self._names, self._coordinates, self._descriptions):
+            yield {
+                'name': name.strip(),
+                'coordinates': CoordinateFilter.filter(coordinates),
+                'description': description
+            }
 
 
 class PageParser:
@@ -83,9 +116,10 @@ class PageParser:
     Later on will be able to parse the text section, and even to combine the text and table results.
     '''
 
-    def __init__(self, table_parser):
+    def __init__(self, table_parser, description_parser):
         ''' Initializes the parser with a TableParser. '''
         self._table_parser = table_parser
+        self._description_parser = description_parser
         self._data = iter([])
 
     def parse(self, page):
@@ -95,8 +129,12 @@ class PageParser:
         page can be either a filename or an URL of the page to be parsed.
         '''
         self._name, self._data = self._table_parser.parse(input=page)
+        # TODO(KNR): train DescriptionParser using entry['description'] for each entry in self._data
         return self._name, self._generator()
 
     def _generator(self):
         for entry in self._data:
-            yield Stage(name=entry['name'], coordinates=entry['coordinates'], tasks={})
+            yield Stage(name=entry['name'],
+                        coordinates=entry['coordinates'],
+                        description=entry['description'],
+                        tasks=list(self._description_parser.parse(entry['description'])))
