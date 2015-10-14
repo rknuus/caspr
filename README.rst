@@ -5,7 +5,7 @@ caspr
 
 The tool relieves you from all the tedious calculations of a multi-stage
 geocache. It converts a https://www.geocaching.com geocache description into a
-Google Docs Sheet where you can enter the answers to the questions. The Sheet
+Google Docs sheet where you can enter the answers to the questions. The sheet
 then performs all intermediate and final coordinate calculations for you.
 
 
@@ -26,7 +26,7 @@ a minimum, so that you can enjoy a hassle-free geocaching tour.
 Limitations
 ===========
 
-Only geocaches of https://www.geocaching.com and only Google Docs Sheets are
+Only geocaches of https://www.geocaching.com and only Google Docs sheets are
 supported.
 
 As the multi-stage descriptions are structured in many different ways, the tool
