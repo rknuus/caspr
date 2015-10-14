@@ -185,4 +185,29 @@ class TestGoogleSheet(unittest.TestCase):
         self.assertIn(call.sheet1.update_acell('B12', 'h'), worksheet_mock.mock_calls)
         self.assertIn(call.sheet1.update_acell('B13', 'i'), worksheet_mock.mock_calls)
 
+    def test_merge_duplicate_variables_per_stage(self):
+        class AttrDict(dict):
+            ''' Hack to allow attribute-like access to dictionary. '''
+            def __init__(self, *args, **kwargs):
+                super(AttrDict, self).__init__(*args, **kwargs)
+                self.__dict__ = self
+
+        sheet = GoogleSheetFake()
+        worksheet_mock = MagicMock()
+        cell_mock = AttrDict()
+        cell_mock.value = 'd1'
+        worksheet_mock.sheet1.acell.return_value = cell_mock
+        sheet._spreadsheets.open = MagicMock(return_value=worksheet_mock)
+        sheet.generate(name='irrelevant',
+                       stages=[Stage(name='irrelevant',
+                                     coordinates='irrelevant',
+                                     description='irrelevant',
+                                     tasks=[Task(description='d1', variables='abc'), Task(description='d2', variables='abc')])])
+        self.assertIn(call.sheet1.update_acell('A3', 'd1\nd2'), worksheet_mock.mock_calls)
+        self.assertIn(call.sheet1.update_acell('B3', 'a'), worksheet_mock.mock_calls)
+        self.assertIn(call.sheet1.update_acell('B4', 'b'), worksheet_mock.mock_calls)
+        self.assertIn(call.sheet1.update_acell('B5', 'c'), worksheet_mock.mock_calls)
+        self.assertNotIn(call.sheet1.update_acell('A6', 'd2'), worksheet_mock.mock_calls)
+        self.assertNotIn(call.sheet1.update_acell('B6', 'a'), worksheet_mock.mock_calls)
+
     # TODO(KNR): test the entire authentication

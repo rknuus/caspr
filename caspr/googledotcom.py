@@ -44,21 +44,28 @@ class GoogleSheet:
         worksheet = self._get_sheet(name=name)
         if not worksheet:
             worksheet = self._create_new_sheet(name=name)
+        # TODO(KNR): else: clear existing worksheet
         sheet = worksheet.sheet1
         index = 0
+        variable_addresses = {}
         for stage_number, stage in enumerate(stages):
             index += 1
             sheet.update_acell('A{0}'.format(index), stage.name)
             sheet.update_acell('B{0}'.format(index), stage.coordinates)
+            index += 1
+            sheet.update_acell('A{0}'.format(index), stage.description)
             for task in stage.tasks:
-                task_index = index
-                index += 1
-                sheet.update_acell('A{0}'.format(index), task['description'])
-                for variable in task['variables']:
-                    task_index += 1
-                    sheet.update_acell('B{0}'.format(task_index), variable)
-                if task_index > index:
-                    index = task_index
+                for variable in task.variables:
+                    if variable not in variable_addresses:
+                        index += 1
+                        sheet.update_acell('A{0}'.format(index), task.description)
+                        variable_addresses[variable] = index
+                        sheet.update_acell('B{0}'.format(index), variable)
+                    else:
+                        variable_index = variable_addresses[variable]
+                        address = 'A{0}'.format(variable_index)
+                        value = '{0}\n{1}'.format(sheet.acell(address).value, task.description)
+                        sheet.update_acell(address, value)
 
     def _get_sheet(self, name):
         try:
