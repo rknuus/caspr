@@ -18,10 +18,13 @@ class GeocachingSite:
                              "forgotten your information")
 
     def __init__(self, user, password):
+        ''' Initializes a session with the given credentials used by all following fetch() calls. '''
+
         self._prepare_session(user, password)
 
     def _prepare_session(self, user, password):
         ''' Initializes an authentication session, so that following fetch() calls get the full page. '''
+
         login_page = requests.get('https://www.geocaching.com/login/default.aspx')
         login_root = html.fromstring(html=login_page.text)
         viewstate = login_root.xpath("//input[@name='__VIEWSTATE']")
@@ -44,6 +47,7 @@ class GeocachingSite:
 
     def fetch(self, code):
         ''' Returns the page text of the geocache with the given code. '''
+
         page = self._session.get('http://www.geocaching.com/geocache/{0}'.format(code))
         # TODO(KNR): why the heck does it not work when passing page.text to the lxml.html parser?! Probably some encoding issue
         with tempfile.NamedTemporaryFile(delete=False) as file:
@@ -52,7 +56,11 @@ class GeocachingSite:
 
 
 class DescriptionParser:
+    ''' Parses a stage description for tasks. '''
+
     def __init__(self):
+        ''' Initializes a new object as empty. '''
+
         # The following regular expression has some drawbacks:
         # - It might mistake declarations like A = 1, B = 2 etc. for variable definitions.
         # - If the same variable is defined multiple times (e.g. in multiple languages), it's not clear what to do.
@@ -61,10 +69,15 @@ class DescriptionParser:
         self._items = []
 
     def parse(self, description):
+        ''' Parses the given description and returns an iterable list of tasks. '''
+
         self._items = filter(None, self._assignment_re.split(description))
         return self._generator()
 
+    # TODO(KNR): consider to move to another module (would need to pass in the data as parameter)
     def _generator(self):
+        ''' A generator returning tasks created from the parsed description. '''
+
         # items = ['                Halte nach einem grossen Schriftzug mit einer Krone Ausschau.', 'A = ', 'wieviele Zacken hat die Krone?', 'BCDEF = ', 'wandle den Namen nach dem System A=1, B=2... um', 'Look ou
         # t for a big lettering with a crown.', 'A = ', 'amount of spikes of the crown', 'BCDEF = ', 'transform the name according to the system A=1, B=2...', '__________________________________________',
         # 'Rechne / ', 'calculate:', 'N 47° [ B - C ].[ B x F - E x F - 3 x C ]', 'E 008° [ B ].[ F x ( B + D + 2 ) + B + 2 ]', '            ']
@@ -82,10 +95,11 @@ class TableParser:
 
     def parse(self, input):
         '''
-        Returns a generator to iterate over all coordinates (for now).
+        Returns an iterable list of stage data.
 
         input can be either a filename or an URL of the page to be parsed.
         '''
+
         # TODO(KNR): does defusedxml also work?
         # TODO(KNR): does etree provide iterparse()?
         root = html.parse(filename_or_url=input)
@@ -98,7 +112,10 @@ class TableParser:
         self._descriptions = ['\n'.join(n.itertext()) for n in description_nodes if n.text.strip()]
         return cache_name, self._generator()
 
+    # TODO(KNR): consider to move to another module (would need to pass in the data as parameter)
     def _generator(self):
+        ''' A generator returning a dictionary created from the parsed page data. '''
+
         for name, coordinates, description in zip(self._names, self._coordinates, self._descriptions):
             yield {
                 'name': name.strip(),
@@ -117,7 +134,8 @@ class PageParser:
     '''
 
     def __init__(self, table_parser, description_parser):
-        ''' Initializes the parser with a TableParser. '''
+        ''' Initializes a new object as empty and links it to the given sub-parsers. '''
+
         self._table_parser = table_parser
         self._description_parser = description_parser
         self._data = iter([])
@@ -128,11 +146,15 @@ class PageParser:
 
         page can be either a filename or an URL of the page to be parsed.
         '''
+
         self._name, self._data = self._table_parser.parse(input=page)
         # TODO(KNR): train DescriptionParser using entry['description'] for each entry in self._data
         return self._name, self._generator()
 
+    # TODO(KNR): consider to move to another module (would need to pass in the data as parameter)
     def _generator(self):
+        ''' A generator returning stages created from the parsed page data. '''
+
         for entry in self._data:
             yield Stage(name=entry['name'],
                         coordinates=entry['coordinates'],

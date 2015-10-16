@@ -56,6 +56,8 @@ class FormulaParser:
 
     @staticmethod
     def _replace_multi_digit_variables(text, variable_addresses):
+        ''' Resolve multi-digit variables like AB to (10*A+B). '''
+
         multi_digits = re.compile('([{alternatives}][{alternatives}]+)'.format(alternatives='|'.join(list(variable_addresses.keys()))))
         for match in re.findall(multi_digits, text):
             resolved = '('
@@ -75,13 +77,19 @@ class GoogleSheet:
     '''
 
     def __init__(self):
+        ''' Authenticates with Google. '''
+
         self._credentials = GoogleSheet._get_credentials()
         self._http = self._credentials.authorize(httplib2.Http())
         self._service = discovery.build('drive', 'v2', http=self._http)
         self._spreadsheets = gspread.authorize(self._credentials)
 
     def generate(self, name, stages):
-        ''' Generates a sheet from stages. '''
+        '''
+        Generates a sheet from stages.
+
+        Creates a new sheet if none found with the name of the cache.
+        '''
 
         worksheet = self._get_sheet(name=name)
         if not worksheet:
@@ -110,12 +118,16 @@ class GoogleSheet:
                         sheet.update_acell(address, value)
 
     def _get_sheet(self, name):
+        ''' Either returns the sheet for the given name or None if not found. '''
+
         try:
             return self._spreadsheets.open(name)
         except gspread.SpreadsheetNotFound:
             return None
 
     def _create_new_sheet(self, name):
+        ''' Creates a new sheet and returns it. '''
+
         body = {
             'mimeType': 'application/vnd.google-apps.spreadsheet',
             'title': name
@@ -125,14 +137,16 @@ class GoogleSheet:
 
     @staticmethod
     def _get_credentials():
-        """Gets valid user credentials from storage.
+        '''
+        Gets valid user credentials from storage.
 
         If nothing has been stored, or if the stored credentials are invalid,
         the OAuth2 flow is completed to obtain the new credentials.
 
         Returns:
             Credentials, the obtained credential.
-        """
+        '''
+
         home_dir = os.path.expanduser('~')  # TODO(KNR): is this portable to Windows?
         credential_dir = os.path.join(home_dir, '.caspr')  # TODO(KNR): is this portable to Windows?
         if not os.path.exists(credential_dir):
@@ -144,9 +158,5 @@ class GoogleSheet:
         if not credentials or credentials.invalid:
             flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES, login_hint='morakn.caching@gmail.com')  # TODO(KNR): replace login_hint by a config value
             flow.user_agent = APPLICATION_NAME
-            # if flags:
-            #     credentials = tools.run_flow(flow, store, flags)
-            # else:  # Needed only for compatability with Python 2.6  # TODO(KNR): remove, we got Python 3
-            #     credentials = tools.run(flow, store)
             credentials = tools.run(flow, store)
         return credentials
