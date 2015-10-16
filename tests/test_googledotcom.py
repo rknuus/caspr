@@ -5,7 +5,7 @@ import gspread
 from unittest.mock import call, MagicMock
 import unittest
 
-from caspr.googledotcom import GoogleSheet
+from caspr.googledotcom import FormulaParser, GoogleSheet
 from caspr.stage import Stage, Task
 
 
@@ -20,6 +20,58 @@ class GoogleSheetFake(GoogleSheet):
 class Anything:
     def __eq__(self, other):
         return True
+
+
+class TestFormulaParser(unittest.TestCase):
+    def test_simple_formula(self):
+        expected = '=C0 + C1'
+        parser = FormulaParser()
+        actual = parser.parse(text='A + B', variable_addresses={'A': 0, 'B': 1})
+        self.assertEqual(actual, expected)
+
+    def test_empty_formula(self):
+        expected = ''
+        parser = FormulaParser()
+        actual = parser.parse(text='', variable_addresses={})
+        self.assertEqual(actual, expected)
+
+    def test_reference_of_unknown_variable(self):
+        expected = '=A'
+        parser = FormulaParser()
+        actual = parser.parse(text='A', variable_addresses={})
+        self.assertEqual(actual, expected)
+
+    def test_basic_math_operations(self):
+        expected = '=C0 + C1 - C2 * C3 / C4'
+        parser = FormulaParser()
+        actual = parser.parse(text='A + B - C * D / E', variable_addresses={'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4})
+        self.assertEqual(actual, expected)
+
+    def test_casual_math_operations_without_variable_conflict(self):
+        expected = '=C0 * C1 / C2'
+        parser = FormulaParser()
+        actual = parser.parse(text='A x B / C', variable_addresses={'A': 0, 'B': 1, 'C': 2})
+        self.assertEqual(actual, expected)
+
+    # not possible as long as variables are only upper case and casual * is only lower case.
+    # def test_casual_math_operations_with_variable_conflict(self):
+    #     expected = 'TBD'
+    #     parser = FormulaParser()
+    #     actual = parser.parse(text='A x B', variable_addresses={'A': 0, 'B': 1, 'x': 2})
+    #     self.assertEqual(actual, expected)
+
+    def test_normalization_of_braces(self):
+        expected = '=()'
+        parser = FormulaParser()
+        for text in ['()', '{}', '[]']:
+            actual = parser.parse(text=text, variable_addresses={})
+            self.assertEqual(actual, expected)
+
+    def test_dual_digit_variable(self):
+        expected = '=(10*C0+1*C1)'
+        parser = FormulaParser()
+        actual = parser.parse(text='AB', variable_addresses={'A': 0, 'B': 1})
+        self.assertEqual(actual, expected)
 
 
 class TestGoogleSheet(unittest.TestCase):

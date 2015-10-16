@@ -7,24 +7,66 @@ from oauth2client import client
 from oauth2client import tools
 import gspread
 import httplib2
+import math
 import oauth2client
 import oauth2client.file
 import os
+import re
 
 
-# try:
-#     import argparse
-#     flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-# except ImportError:
-#     flags = None
-
-
-# SCOPES = 'https://www.googleapis.com/auth/drive.metadata.readonly'
-# SCOPES = 'userinfo.email,userinfo.profile,https://www.googleapis.com/auth/drive.file'
 # NOTE: when changing the scope delete ~/.caspr/drive.json
 SCOPES = "https://docs.google.com/feeds/ https://docs.googleusercontent.com/ https://spreadsheets.google.com/feeds/"
 CLIENT_SECRET_FILE = 'client_secret_61425214161-mo3vloo7gsroqkfmfb3agc5j5qhibkqv.apps.googleusercontent.com.json'
 APPLICATION_NAME = 'caspr'
+
+
+class FormulaParser:
+    ''' Extracts formulas from texts. '''
+
+    def parse(self, text, variable_addresses):
+        ''' Returns a Google Docs Sheet formula of the given formula text using given variable addresses. '''
+
+        if not text:
+            return ''
+
+        # Normalize casual mathematical operations.
+        text = text.replace(':', '/')
+        # TODO(KNR): if we allow lower case variables skip this step if the variables contain 'x'
+        text = text.replace('x', '*')
+
+        # Normalize braces.
+        text = text.replace('{', '(')
+        text = text.replace('}', ')')
+        text = text.replace('[', '(')
+        text = text.replace(']', ')')
+
+        # Resolve multi-digit variables like AB to (10*A+B).
+        text = FormulaParser._replace_multi_digit_variables(text=text, variable_addresses=variable_addresses)
+
+        # Special treatment for 'C', as we need it to reference other cells.
+        if 'C' in variable_addresses:
+            text = text.replace('C', 'C{0}'.format(variable_addresses['C']))
+
+        # References for all other variables.
+        for variable, index in variable_addresses.items():
+            if variable != 'C':  # TODO(KNR): figure out a list comprehension
+                # TODO(KNR): not sure if I may modify text or whether I should copy it first
+                text = text.replace(variable, 'C{0}'.format(index))
+        return '={0}'.format(text)
+
+    @staticmethod
+    def _replace_multi_digit_variables(text, variable_addresses):
+        multi_digits = re.compile('([{alternatives}][{alternatives}]+)'.format(alternatives='|'.join(list(variable_addresses.keys()))))
+        for match in re.findall(multi_digits, text):
+            resolved = '('
+            max_power = len(match) - 1
+            for index, variable in enumerate(match):
+                if index > 0:
+                    resolved += '+'
+                resolved += '{0}*{1}'.format(10**(max_power-index), variable)
+            resolved += ')'
+            text = text.replace(match, resolved)
+        return text
 
 
 class GoogleSheet:
@@ -61,7 +103,7 @@ class GoogleSheet:
                         sheet.update_acell('A{0}'.format(index), task.description)
                         variable_addresses[variable] = index
                         sheet.update_acell('B{0}'.format(index), variable)
-                    else:
+                    else:  # merge the task description into the existing task description
                         variable_index = variable_addresses[variable]
                         address = 'A{0}'.format(variable_index)
                         value = '{0}\n{1}'.format(sheet.acell(address).value, task.description)
