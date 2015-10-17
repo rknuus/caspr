@@ -16,14 +16,15 @@ import re
 
 # NOTE: when changing the scope delete ~/.caspr/drive.json
 SCOPES = "https://docs.google.com/feeds/ https://docs.googleusercontent.com/ https://spreadsheets.google.com/feeds/"
+# TODO(KNR): figure out whether each user needs to register an own client secret and if so how to use it
 CLIENT_SECRET_FILE = 'client_secret_61425214161-mo3vloo7gsroqkfmfb3agc5j5qhibkqv.apps.googleusercontent.com.json'
 APPLICATION_NAME = 'caspr'
 
 
-class FormulaParser:
+class FormulaConverter:
     ''' Extracts formulas from texts. '''
 
-    def parse(self, text, variable_addresses):
+    def resolve_formula(self, text, variable_addresses):
         ''' Returns a Google Docs Sheet formula of the given formula text using given variable addresses. '''
 
         if not text:
@@ -35,13 +36,14 @@ class FormulaParser:
         text = text.replace('x', '*')
 
         # Normalize braces.
+        # TODO(KNR): merge to regex
         text = text.replace('{', '(')
         text = text.replace('}', ')')
         text = text.replace('[', '(')
         text = text.replace(']', ')')
 
         # Resolve multi-digit variables like AB to (10*A+B).
-        text = FormulaParser._replace_multi_digit_variables(text=text, variable_addresses=variable_addresses)
+        text = FormulaConverter._replace_multi_digit_variables(text=text, variable_addresses=variable_addresses)
 
         # Special treatment for 'C', as we need it to reference other cells.
         if 'C' in variable_addresses:
