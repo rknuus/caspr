@@ -4,6 +4,9 @@
 from unittest.mock import MagicMock, patch
 from urllib.parse import quote_plus
 import os
+import shutil
+import tarfile
+import tempfile
 import unittest
 import responses
 
@@ -11,21 +14,33 @@ from caspr.casprexception import CasprException
 from caspr.geocachingdotcom import GeocachingSite, DescriptionParser, PageParser, TableParser
 from caspr.stage import Stage, Task
 
-_SAMPLE_TABLE_PATH = ('sample_data/GC2A62B Seepromenade Luzern [DE_EN] (Multi-cache) in Zentralschweiz '
-                      '(ZG_SZ_LU_UR_OW_NW), Switzerland created by Worlddiver.html')
+_SAMPLE_TABLE_PATH = ('GC2A62B Seepromenade Luzern [DE_EN] (Multi-cache) in Zentralschweiz (ZG_SZ_LU_UR_OW_NW), '
+                      'Switzerland created by Worlddiver.html')
 
 
 def _urlencode_parameter(name, value):
     return '{0}={1}'.format(quote_plus(name), quote_plus(value))
 
 
+class SampleData():
+    def __init__(self):
+        self.temp_path = tempfile.mkdtemp()
+        compressed_files = tarfile.open('tests/sample_data/samples.tar.bz2', 'r|*')
+        compressed_files.extractall(path=self.temp_path)
+
+    def __del__(self):
+        shutil.rmtree(self.temp_path)
+
+_SAMPLE_DATA = SampleData()
+
+
 class TestCaspr(unittest.TestCase):
     def setUp(self):
-        with open('tests/sample_data/login_page.html') as file:
+        with open(os.path.join(_SAMPLE_DATA.temp_path, 'login_page.html')) as file:
             self._login_page_content = file.read()
-        with open('tests/sample_data/login_failed.html') as file:
+        with open(os.path.join(_SAMPLE_DATA.temp_path, 'login_failed.html')) as file:
             self._login_failed_page_content = file.read()
-        with open('tests/sample_data/cache.html') as file:
+        with open(os.path.join(_SAMPLE_DATA.temp_path, 'cache.html')) as file:
             self._cache_page_content = file.read()
 
     @responses.activate
@@ -121,7 +136,7 @@ class TestTableParser(unittest.TestCase):
         coordinate_filter_mock.filter.assert_called_with('irrelevant')
 
     def test_parse_sets_raw_coordinates_of_sample_file(self):
-        path = os.path.join(os.path.dirname(__file__), _SAMPLE_TABLE_PATH)
+        path = os.path.join(_SAMPLE_DATA.temp_path, _SAMPLE_TABLE_PATH)
         table_parser = TableParser()
         table_parser.parse(input=path)
         self.assertEqual(table_parser._names,
