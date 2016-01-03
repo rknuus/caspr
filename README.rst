@@ -12,10 +12,13 @@ then performs all intermediate and final coordinate calculations for you.
 Description
 ===========
 
+CAche Sheet PReparation is work in progress! So far it only supports geocaches
+with tables and was tested only for GC2A62B.
+
 CAche Sheet PReparation supports the preparation of Google Docs sheets for
 multi-stage geocaches. The sheet can be opened offline (!) on a mobile device
-if the offline mode of the document is active and if you open it in Google's
-Chrome browser.
+if you activate the offline mode of the document and open it in Google's Chrome
+browser.
 
 The sheet provides fields to enter the answers to the questions of each stage,
 and automatically calculates intermediate and the final geocache positions
