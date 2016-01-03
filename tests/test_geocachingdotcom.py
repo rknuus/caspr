@@ -100,17 +100,17 @@ class TestPageParser(unittest.TestCase):
         parser._name = 'name'
         parser._position = 'position'
         parser._description = 'description'
-        parser._data = iter([])
+        parser._stages = iter([])
         generator = parser._generator()
         actual = list(generator)
         self.assertEqual([Stage(name='name', coordinates='position', description='description', tasks=[])], actual)
 
-    def test_generator_iterates_over_data_once(self):
+    def test_generator_iterates_over_stages_once(self):
         parser = PageParser(table_parser=None, description_parser=MagicMock())
         parser._name = 'cache name'
         parser._position = 'anchor position'
         parser._description = 'cache description'
-        parser._data = iter(
+        parser._stages = iter(
             [{'name': 'stage name',
               'coordinates': 'stage position',
               'description': 'stage description',
@@ -134,7 +134,7 @@ class TestTableParser(unittest.TestCase):
         table_parser.parse(root=root_mock)
         self.assertTrue(root_mock.xpath.called)
 
-    def test_no_iteration_if_data_empty(self):
+    def test_no_iteration_if_stages_empty(self):
         parser = TableParser()
         stages = parser.parse(root=MagicMock())
         self.assertEqual(len(list(stages)), 0)

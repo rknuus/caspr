@@ -131,7 +131,7 @@ class PageParser:
 
         self._table_parser = table_parser
         self._description_parser = description_parser
-        self._data = iter([])
+        self._stages = iter([])
 
     def parse(self, page):
         '''
@@ -152,8 +152,8 @@ class PageParser:
         cache_name_nodes = root.xpath("//title[position()=1]/text()")
         self._name = cache_name_nodes[0].strip() if len(cache_name_nodes) > 0 else ''
 
-        self._data = self._table_parser.parse(root=root)
-        # TODO(KNR): train DescriptionParser using entry['description'] for each entry in self._data
+        self._stages = self._table_parser.parse(root=root)
+        # TODO(KNR): train DescriptionParser using entry['description'] for each entry in self._stages
         return self._name, self._generator()
 
     # TODO(KNR): consider to move to another module (would need to pass in the data as parameter)
@@ -167,7 +167,7 @@ class PageParser:
                     coordinates=self._position,
                     description=self._description,
                     tasks=list(self._description_parser.parse(self._description)))
-        for entry in self._data:
+        for entry in self._stages:
             yield Stage(name=entry['name'],
                         coordinates=entry['coordinates'],
                         description=entry['description'],
