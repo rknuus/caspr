@@ -98,7 +98,8 @@ class TableParser:
         '''
 
         stage_name_nodes = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=6]")
-        self._names = [''.join(x for x in n.itertext()) for n in stage_name_nodes]  # TODO(KNR): huh?
+        # TODO(KNR): the following line works, but there must be a better way
+        self._names = [''.join(x for x in n.itertext()) for n in stage_name_nodes]
         self._coordinates = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=7]/text()")
         description_nodes = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=3]")
         self._descriptions = ['\n'.join(n.itertext()) for n in description_nodes if n.text.strip()]
@@ -112,7 +113,7 @@ class TableParser:
             yield {
                 'name': name.strip(),
                 'coordinates': CoordinateFilter.filter(coordinates),
-                'description': description
+                'description': description.strip()
             }
 
 
@@ -142,6 +143,12 @@ class PageParser:
         # TODO(KNR): does defusedxml also work?
         # TODO(KNR): does etree provide iterparse()?
         root = html.parse(filename_or_url=page)
+        desc_nodes = root.xpath("//span[@id='ctl00_ContentBody_LongDescription']//p")
+        # TODO(KNR): the following line works, but there must be a better way. Unfortunately there might be empty
+        # paragraphs, which spoil the description
+        self._description = '\n'.join(filter(None, [''.join(x for x in n.itertext()) for n in desc_nodes])).strip()
+        pos_nodes = root.xpath("//span[@id='uxLatLon']")
+        self._position = pos_nodes[0].text_content().strip()
         cache_name_nodes = root.xpath("//title[position()=1]/text()")
         self._name = cache_name_nodes[0].strip() if len(cache_name_nodes) > 0 else ''
 
@@ -153,6 +160,13 @@ class PageParser:
     def _generator(self):
         ''' A generator returning stages created from the parsed page data. '''
 
+        # Simply return the entire cache description as initial stage. For many multis this cache description contains
+        # all stages, in which case the name of the type Stage is misleading...
+        # TODO(KNR): try to avoid redundant variable definitions in the cache description and the table
+        yield Stage(name=self._name,
+                    coordinates=self._position,
+                    description=self._description,
+                    tasks=list(self._description_parser.parse(self._description)))
         for entry in self._data:
             yield Stage(name=entry['name'],
                         coordinates=entry['coordinates'],

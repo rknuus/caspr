@@ -32,6 +32,7 @@ class SampleData():
     def __del__(self):
         shutil.rmtree(self.temp_path)
 
+
 _SAMPLE_DATA = SampleData()
 
 
@@ -94,26 +95,35 @@ class TestPageParser(unittest.TestCase):
 
     # TODO(KNR): add test that description parser is called
 
-    def test_no_iteration_if_data_empty(self):
-        parser = PageParser(table_parser=None, description_parser=None)
+    def test_single_iteration_if_table_empty(self):
+        parser = PageParser(table_parser=None, description_parser=MagicMock())
+        parser._name = 'name'
+        parser._position = 'position'
+        parser._description = 'description'
         parser._data = iter([])
         generator = parser._generator()
         actual = list(generator)
-        self.assertEqual([], actual)
+        self.assertEqual([Stage(name='name', coordinates='position', description='description', tasks=[])], actual)
 
     def test_generator_iterates_over_data_once(self):
         parser = PageParser(table_parser=None, description_parser=MagicMock())
+        parser._name = 'cache name'
+        parser._position = 'anchor position'
+        parser._description = 'cache description'
         parser._data = iter(
-            [{'name': 'irrelevant',
-              'coordinates': 'irrelevant',
-              'description': 'irrelevant',
+            [{'name': 'stage name',
+              'coordinates': 'stage position',
+              'description': 'stage description',
               'tasks': {}}])
         generator = parser._generator()
         actual = list(generator)
-        self.assertEqual([Stage(name='irrelevant',
-                                coordinates='irrelevant',
-                                description='irrelevant',
-                                tasks=[])], actual)
+        self.assertEqual([Stage(name='cache name',
+                                coordinates='anchor position',
+                                description='cache description',
+                                tasks=[]), Stage(name='stage name',
+                                                 coordinates='stage position',
+                                                 description='stage description',
+                                                 tasks=[])], actual)
 
 
 class TestTableParser(unittest.TestCase):
