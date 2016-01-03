@@ -1,7 +1,7 @@
 import re
 
 
-class CoordinateFilter:
+class StaticCoordinate:
     # TODO(KNR): is there a coordinate parser library?
 
     _LONGITUDE_PATTERN = '[NS]\s*\d{1,2}[°]?\s+\d{1,2}[.]\d{3}'
@@ -11,8 +11,8 @@ class CoordinateFilter:
     _COORDINATE_RE = re.compile('({longitude}\s+{lattitude})'.format(longitude=_LONGITUDE_PATTERN, lattitude=_LATTITUDE_PATTERN))
 
     @staticmethod
-    def filter(input):
-        match = re.search(CoordinateFilter._COORDINATE_RE, input)
+    def match(input):
+        match = re.search(StaticCoordinate._COORDINATE_RE, input)
         if not match:
             return None
         return match.group()

@@ -139,7 +139,7 @@ class TestTableParser(unittest.TestCase):
         stages = parser.parse(root=MagicMock())
         self.assertEqual(len(list(stages)), 0)
 
-    @patch('caspr.geocachingdotcom.CoordinateFilter')
+    @patch('caspr.geocachingdotcom.StaticCoordinate')
     def test_generator_calls_filter(self, coordinate_filter_mock):
         table_parser = TableParser()
         table_parser._names = ['irrelevant_name']
@@ -147,7 +147,7 @@ class TestTableParser(unittest.TestCase):
         table_parser._descriptions = ['irrelevant_description']
         generator = table_parser._generator()
         list(generator)
-        coordinate_filter_mock.filter.assert_called_with('to_filter')
+        coordinate_filter_mock.match.assert_called_with('to_filter')
 
     def test_parse_sets_raw_coordinates_of_sample_file(self):
         path = os.path.join(_SAMPLE_DATA.temp_path, _SAMPLE_TABLE_PATH)

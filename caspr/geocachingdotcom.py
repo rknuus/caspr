@@ -7,7 +7,7 @@ import requests
 import tempfile
 
 from caspr.casprexception import CasprException
-from caspr.coordinatefilter import CoordinateFilter
+from caspr.staticcoordinate import StaticCoordinate
 from caspr.stage import Stage, Task
 
 
@@ -112,7 +112,7 @@ class TableParser:
         for name, coordinates, description in zip(self._names, self._coordinates, self._descriptions):
             yield {
                 'name': name.strip(),
-                'coordinates': CoordinateFilter.filter(coordinates),
+                'coordinates': StaticCoordinate.match(coordinates),
                 'description': description.strip()
             }
 
