@@ -155,6 +155,12 @@ class TestFormulaConverter(unittest.TestCase):
         actual = converter.parse('N 47° [ B - C ].[ B x F - E x F - 3 x C ]')
         self.assertEqual(list(actual), expected)
 
+    def test_skip_static_coordinates(self):
+        expected = []
+        converter = FormulaConverter(variable_addresses=dict(zip(map(chr, range(ord('A'), ord('T'))), range(1, 20))))
+        actual = converter.parse('N 47° 30.847')
+        self.assertEqual(list(actual), expected)
+
 
 class TestGoogleSheet(unittest.TestCase):
     def test_generate_creates_new_sheet_if_not_exists(self):

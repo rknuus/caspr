@@ -12,6 +12,7 @@ import os
 import re
 
 from caspr.casprexception import CasprException
+from caspr.staticcoordinate import StaticCoordinate
 
 
 # NOTE: when changing the scope delete ~/.caspr/drive.json
@@ -80,6 +81,8 @@ class FormulaConverter:
         formula_re = re.compile(self._formula)
         for match in re.finditer(self._dynamic_coordinates, string=description):
             normalized_coordinates = self._normalize(match.group())
+            if StaticCoordinate.match_partially(normalized_coordinates):
+                continue  # Don't treat static coordinates as formulae.
             # Get rid of orientation, which might be misinterpreted as variable otherwise.
             assert normalized_coordinates[0] in FormulaConverter._ORIENTATION
             dynamic_coordinates = '="{0}"'.format(normalized_coordinates[0])
@@ -123,6 +126,7 @@ class FormulaConverter:
         text = self._replace_multi_digit_variables(text=text)
 
         # Special treatment for 'C', as we need it to reference other cells.
+        # TODO(KNR): can be avoided when using addressing scheme R1C1
         if 'C' in self._variable_addresses:
             text = text.replace('C', 'C{0}'.format(self._variable_addresses['C']))
 
