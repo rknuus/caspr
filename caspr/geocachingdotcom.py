@@ -78,9 +78,6 @@ class DescriptionParser:
     def _generator(self):
         ''' A generator returning tasks created from the parsed description. '''
 
-        # items = ['                Halte nach einem grossen Schriftzug mit einer Krone Ausschau.', 'A = ', 'wieviele Zacken hat die Krone?', 'BCDEF = ', 'wandle den Namen nach dem System A=1, B=2... um', 'Look ou
-        # t for a big lettering with a crown.', 'A = ', 'amount of spikes of the crown', 'BCDEF = ', 'transform the name according to the system A=1, B=2...', '__________________________________________',
-        # 'Rechne / ', 'calculate:', 'N 47° [ B - C ].[ B x F - E x F - 3 x C ]', 'E 008° [ B ].[ F x ( B + D + 2 ) + B + 2 ]', '            ']
         variables = ''
         for item in self._items:
             if self._assignment_re.match(item):
@@ -93,24 +90,19 @@ class DescriptionParser:
 class TableParser:
     ''' Parses the table of a geocache page. '''
 
-    def parse(self, input):
+    def parse(self, root):
         '''
         Returns an iterable list of stage data.
 
         input can be either a filename or an URL of the page to be parsed.
         '''
 
-        # TODO(KNR): does defusedxml also work?
-        # TODO(KNR): does etree provide iterparse()?
-        root = html.parse(filename_or_url=input)
-        cache_name_nodes = root.xpath("//title[position()=1]/text()")
-        cache_name = cache_name_nodes[0].strip() if len(cache_name_nodes) > 0 else ''
         stage_name_nodes = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=6]")
         self._names = [''.join(x for x in n.itertext()) for n in stage_name_nodes]  # TODO(KNR): huh?
         self._coordinates = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=7]/text()")
         description_nodes = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=3]")
         self._descriptions = ['\n'.join(n.itertext()) for n in description_nodes if n.text.strip()]
-        return cache_name, self._generator()
+        return self._generator()
 
     # TODO(KNR): consider to move to another module (would need to pass in the data as parameter)
     def _generator(self):
@@ -147,7 +139,13 @@ class PageParser:
         page can be either a filename or an URL of the page to be parsed.
         '''
 
-        self._name, self._data = self._table_parser.parse(input=page)
+        # TODO(KNR): does defusedxml also work?
+        # TODO(KNR): does etree provide iterparse()?
+        root = html.parse(filename_or_url=page)
+        cache_name_nodes = root.xpath("//title[position()=1]/text()")
+        self._name = cache_name_nodes[0].strip() if len(cache_name_nodes) > 0 else ''
+
+        self._data = self._table_parser.parse(root=root)
         # TODO(KNR): train DescriptionParser using entry['description'] for each entry in self._data
         return self._name, self._generator()
 

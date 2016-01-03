@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from lxml import html
 from unittest.mock import MagicMock, patch
 from urllib.parse import quote_plus
 import os
@@ -77,9 +78,16 @@ class TestCaspr(unittest.TestCase):
 
 
 class TestPageParser(unittest.TestCase):
-    def test_parse_calls_parse_on_table_parser(self):
+    @patch('caspr.geocachingdotcom.html')
+    def test_parse_calls_html_parse(self, html_mock):
+        parser = PageParser(table_parser=MagicMock(), description_parser=None)
+        parser.parse(page='irrelevant')
+        self.assertTrue(html_mock.parse.called)
+        html_mock.parse.assert_called_with(filename_or_url='irrelevant')
+
+    @patch('caspr.geocachingdotcom.html')
+    def test_parse_calls_parse_on_table_parser(self, html_mock):
         table_parser_mock = MagicMock()
-        table_parser_mock.parse.return_value = ('irrelevant', [])
         parser = PageParser(table_parser=table_parser_mock, description_parser=None)
         parser.parse(page='irrelevant')
         self.assertTrue(table_parser_mock.parse.called)
@@ -111,34 +119,31 @@ class TestPageParser(unittest.TestCase):
 class TestTableParser(unittest.TestCase):
     @patch('caspr.geocachingdotcom.html')
     def test_parse_calls_html_xpath(self, html_mock):
+        root_mock = MagicMock()
         table_parser = TableParser()
-        table_parser.parse(input='irrelevant')
-        self.assertTrue(html_mock.parse.called)
-        html_mock.parse.assert_called_with(filename_or_url='irrelevant')
+        table_parser.parse(root=root_mock)
+        self.assertTrue(root_mock.xpath.called)
 
-    @patch('caspr.geocachingdotcom.html')
-    def test_no_iteration_if_data_empty(self, html_mock):
-        dom_mock = MagicMock()
-        dom_mock.xpath = MagicMock(return_value=[])
-        html_mock.parse = MagicMock(return_value=dom_mock)
+    def test_no_iteration_if_data_empty(self):
         parser = TableParser()
-        name, stages = parser.parse('')
+        stages = parser.parse(root=MagicMock())
         self.assertEqual(len(list(stages)), 0)
 
     @patch('caspr.geocachingdotcom.CoordinateFilter')
     def test_generator_calls_filter(self, coordinate_filter_mock):
         table_parser = TableParser()
-        table_parser._names = ['irrelevant']
-        table_parser._coordinates = ['irrelevant']
-        table_parser._descriptions = ['irrelevant']
+        table_parser._names = ['irrelevant_name']
+        table_parser._coordinates = ['to_filter']
+        table_parser._descriptions = ['irrelevant_description']
         generator = table_parser._generator()
         list(generator)
-        coordinate_filter_mock.filter.assert_called_with('irrelevant')
+        coordinate_filter_mock.filter.assert_called_with('to_filter')
 
     def test_parse_sets_raw_coordinates_of_sample_file(self):
         path = os.path.join(_SAMPLE_DATA.temp_path, _SAMPLE_TABLE_PATH)
+        root = html.parse(filename_or_url=path)
         table_parser = TableParser()
-        table_parser.parse(input=path)
+        table_parser.parse(root=root)
         self.assertEqual(table_parser._names,
                          ['\n                Stage 1: Schwanenplatz (Virtuelle Station)\n            ',
                           '\n                Stage 2: Pavillion (Virtuelle Station)\n            ',
