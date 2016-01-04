@@ -12,8 +12,9 @@ then performs all intermediate and final coordinate calculations for you.
 Description
 ===========
 
-CAche Sheet PReparation is work in progress! So far it only supports geocaches
-with tables and was tested only for GC2A62B.
+CAche Sheet PReparation is work in progress! So far it supports geocaches with
+all formulae in the geocache description like GC30N6K as well as geocaches with
+tables like GC2A62B.
 
 CAche Sheet PReparation supports the preparation of Google Docs sheets for
 multi-stage geocaches. The sheet can be opened offline (!) on a mobile device

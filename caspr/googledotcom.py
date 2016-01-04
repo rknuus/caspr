@@ -14,7 +14,6 @@ import re
 from caspr.casprexception import CasprException
 from caspr.staticcoordinate import StaticCoordinate
 
-
 # NOTE: when changing the scope delete ~/.caspr/drive.json
 SCOPES = "https://docs.google.com/feeds/ https://docs.googleusercontent.com/ https://spreadsheets.google.com/feeds/"
 # TODO(KNR): figure out whether each user needs to register an own client secret and if so how to use it
@@ -29,24 +28,31 @@ class FormulaConverter:
     Currently only supports WGS84 with floating point minutes in EN or DE.
     '''
 
-    # TODO(KNR): not sure whether regular expressions are a clever choice...
     _WS = '[ \t]'
     _OPENING_BRACES = '[([{]'
     _CLOSING_BRACES = '[)\]}]'
     _BRACES = '{opening}|{closing}'.format(opening=_OPENING_BRACES, closing=_CLOSING_BRACES)
     _MATH_OPS = '[+\-/*]'  # Note: escape '-', otherwise it would be a range!
     _CASUAL_MATH_OPS = '[:x]'  # TODO(KNR): not sure if there are some lunatics using even more operators
-    # Beware: as the variables are only known at runtime need to format them when using _FORMULA
+    # Beware: as the variables are only known at runtime need to format them before using _FORMULA
     _FORMULA = ('((?:\d|{braces}|{math_ops}|{casual_math_ops}|{variables})'
-                '(?:\d|{ws}|{braces}|{math_ops}|{casual_math_ops}|{variables})+)')
-    _ORIENTATION = '[NSOEW]'  # TODO(KNR): internationalize
+                '(?:{ws}|\d|{braces}|{math_ops}|{casual_math_ops}|{variables})+)')
+    _ORIENTATION = '[NSOEW]'  # TODO(KNR): internationalize, currently EN and DE supported
     _DEGREE = '[°]'
     _DECIMAL_SEPARATOR = '[.,]'
-    # Beware: as the variables are only known at runtime need to format them when using _DYNAMIC_COORDINATES
+    _MASK = '({orientation})({ws}*{formula}{ws}*{degree})'
+    _FIX_MASK = '[|]({orientation})[|](?!{ws}*{formula}{ws}*{degree})'
+    # Beware: as the variables are only known at runtime need to format them before using _DYNAMIC_DIMENSION
     # N 47° [ B - C ].[ B x F - E x F - 3 x C ]
     # TODO(KNR): should replace last '*' by '{0,2}', but this results in a key error...
-    _DYNAMIC_COORDINATES = ('({orientation}{ws}*{formula}{ws}*{degree}{ws}*{formula}{ws}*(?:{formula}{ws}*)?{separator}'
-                            '{ws}*{formula}{ws}*(?:{formula}{ws}*)*)')
+    _DYNAMIC_DIMENSION = (
+        '[|]{orientation}[|]{ws}*{formula}{ws}*{degree}{ws}*{formula}{ws}*(?:{formula}{ws}*)?{separator}'
+        '{ws}*{formula}(?:{ws}*{formula})*')
+    _DYNAMIC_COORDINATE = (
+        '[|]{orientation}[|]{ws}*{formula}{ws}*{degree}{ws}*{formula}{ws}*(?:{formula}{ws}*)?{separator}'
+        '{ws}*{formula}{ws}*(?:{formula}{ws}*)*[|]{orientation}[|]{ws}*{formula}{ws}*{degree}{ws}*'
+        '{formula}{ws}*(?:{formula}{ws}*)?{separator}{ws}*{formula}{ws}*(?:{formula}{ws}*)*')
+    _DYNAMIC_POSITION = '({dimension})({dimension})?'.format(dimension=_DYNAMIC_DIMENSION)
 
     def __init__(self, variable_addresses):
         ''' Initializes a formula converter with the variable addresses to be found in the formulas. '''
@@ -55,18 +61,42 @@ class FormulaConverter:
             raise CasprException('variable addresses dictionary must not be empty')
 
         self._variable_addresses = variable_addresses
-        self._formula = FormulaConverter._FORMULA.format(
+        self._formula = FormulaConverter._FORMULA.format(  # TODO(KNR): probably no need for a member variable
             ws=FormulaConverter._WS,
             braces=FormulaConverter._BRACES,
             math_ops=FormulaConverter._MATH_OPS,
             casual_math_ops=FormulaConverter._CASUAL_MATH_OPS,
             variables='[{0}]'.format(''.join(self._variable_addresses.keys())))
-        self._dynamic_coordinates = FormulaConverter._DYNAMIC_COORDINATES.format(
+        self._formula_re = re.compile(self._formula)
+        self._dynamic_dimension = FormulaConverter._DYNAMIC_DIMENSION.format(
             ws=FormulaConverter._WS,
             orientation=FormulaConverter._ORIENTATION,
             formula=self._formula,
             degree=FormulaConverter._DEGREE,
             separator=FormulaConverter._DECIMAL_SEPARATOR)
+        self._dynamic_dimension_re = re.compile(self._dynamic_dimension)
+        # self._dynamic_position = FormulaConverter._DYNAMIC_POSITION.format(  # TODO(KNR): probably no need for a member variable
+        #     ws=FormulaConverter._WS,
+        #     orientation=FormulaConverter._ORIENTATION,
+        #     formula=self._formula,
+        #     degree=FormulaConverter._DEGREE,
+        #     separator=FormulaConverter._DECIMAL_SEPARATOR)
+        # self._dynamic_position_re = re.compile(self._dynamic_position)
+        # self._dynamic_coordinate = FormulaConverter._DYNAMIC_COORDINATE.format(  # TODO(KNR): probably no need for a member variable
+        #     ws=FormulaConverter._WS,
+        #     orientation=FormulaConverter._ORIENTATION,
+        #     formula=self._formula,
+        #     degree=FormulaConverter._DEGREE,
+        #     separator=FormulaConverter._DECIMAL_SEPARATOR)
+        # self._dynamic_coordinate_re = re.compile(self._dynamic_coordinate)
+        self._mask_re = re.compile(FormulaConverter._MASK.format(ws=FormulaConverter._WS,
+                                                                 orientation=FormulaConverter._ORIENTATION,
+                                                                 formula=self._formula,
+                                                                 degree=FormulaConverter._DEGREE))
+        self._fix_mask_re = re.compile(FormulaConverter._FIX_MASK.format(ws=FormulaConverter._WS,
+                                                                         orientation=FormulaConverter._ORIENTATION,
+                                                                         formula=self._formula,
+                                                                         degree=FormulaConverter._DEGREE))
 
     def parse(self, description):
         '''
@@ -78,23 +108,50 @@ class FormulaConverter:
     def _generator(self, description):
         ''' A generator returning dynamic coordinates with resolved variables created from the parsed description. '''
 
-        formula_re = re.compile(self._formula)
-        for match in re.finditer(self._dynamic_coordinates, string=description):
+        description = self._mask_orientation(description)
+
+        # Yuk... Adapted from StaticCoordinate, which is not aware of the silly masking
+        _LONGITUDE_PATTERN = '[|][NS][|]\s*\d{1,2}[°]?\s+\d{1,2}[.]\d{3}'
+        _LATTITUDE_PATTERN = '[|][EW][|]\s*\d{1,3}[°]?\s+\d{1,2}[.]\d{3}'
+        _PARTIAL_RE = re.compile('({longitude}|{lattitude})'.format(longitude=_LONGITUDE_PATTERN,
+                                                                    lattitude=_LATTITUDE_PATTERN))
+
+        for match in re.finditer(self._dynamic_dimension_re, string=description):
             normalized_coordinates = self._normalize(match.group())
-            if StaticCoordinate.match_partially(normalized_coordinates):
+
+            if re.search(_PARTIAL_RE, normalized_coordinates):
                 continue  # Don't treat static coordinates as formulae.
+
             # Get rid of orientation, which might be misinterpreted as variable otherwise.
-            assert normalized_coordinates[0] in FormulaConverter._ORIENTATION
-            dynamic_coordinates = '="{0}"'.format(normalized_coordinates[0])
-            # print('matching <', normalized_coordinates[1:], '> with <', formula_re.pattern, '>')
-            for group in formula_re.split(normalized_coordinates[1:]):
-                if formula_re.match(group):
+            assert normalized_coordinates[1] in FormulaConverter._ORIENTATION
+            dynamic_coordinates = '="{0}"'.format(normalized_coordinates[1])
+
+            # TODO(KNR): replace commented out print by proper logging
+            # print('matching <', normalized_coordinates[3:], '> with <', self._formula_re.pattern, '>')
+            for group in self._formula_re.split(normalized_coordinates[3:]):
+                if self._formula_re.match(group):
                     dynamic_coordinates += '&'
                     dynamic_coordinates += self._resolve_formula(text=group)
                 elif group:
                     dynamic_coordinates += '&'
                     dynamic_coordinates += '"{0}"'.format(group)
             yield dynamic_coordinates
+
+    def _mask_orientation(self, description):
+        '''
+        Hack to mask the orientation, e.g. replacing N by |N|.
+
+        Required to:
+        - properly terminate combined lattitude & longitude.
+        - avoid accidental replacement of orientation if there are variables with names like orientations (e.g. N or E).
+        '''
+
+        # TODO(KNR): there has to be a simpler way, this is really cheesy
+        # Repeat masking to cover concatenated lattitude and longitude.
+        # Because the lattitude might contain a variable named like an orientation the mask is possibly inserted at a
+        # wrong place. That's why we need to remove all wrong masks again.
+        return re.sub(self._fix_mask_re, r'\1', re.sub(self._mask_re, r'|\1|\2', re.sub(self._mask_re, r'|\1|\2',
+                                                                                        description)))
 
     def _normalize(self, text):
         ''' Cleans the given text from all characters screwing up Google Docs Sheet formulas. '''
