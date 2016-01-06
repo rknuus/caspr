@@ -24,6 +24,23 @@ class TestStaticCoordinate(unittest.TestCase):
     def test_fullcoordinates_do_match_partially_returns_longitude(self):
         self.assertEquals(StaticCoordinate.match_partially('N 47° 03.204 E 008° 18.557'), 'N 47° 03.204')
 
+    def test_filter_static_coordinates_from_input_without_static_coordinate(self):
+        given = expected = 'Lorem ipsum'
+        actual = StaticCoordinate.filter(given)
+        self.assertEqual(actual, expected)
+
+    def test_filter_static_coordinates_from_input_with_single_static_dimension(self):
+        given = 'Lorem E 008° 12.345 ipsum'
+        expected = 'Lorem  ipsum'
+        actual = StaticCoordinate.filter(given)
+        self.assertEqual(actual, expected)
+
+    def test_filter_static_coordinates_from_input_with_static_coordinate(self):
+        given = 'Lorem N 47° 03.204 E 008° 12.345 ipsum'
+        expected = 'Lorem   ipsum'
+        actual = StaticCoordinate.filter(given)
+        self.assertEqual(actual, expected)
+
 
 # TESTLIST:
 # - coordinates_in_wgs84_decimal

@@ -24,3 +24,7 @@ class StaticCoordinate:
         if not match:
             return None
         return match.group()
+
+    @staticmethod
+    def filter(input):
+        return re.sub(StaticCoordinate._PARTIAL_RE, '', input)

@@ -12,6 +12,7 @@ import os
 import re
 
 from caspr.casprexception import CasprException
+from caspr.staticcoordinate import StaticCoordinate
 
 # NOTE: when changing the scope delete ~/.caspr/drive.json
 SCOPES = "https://docs.google.com/feeds/ https://docs.googleusercontent.com/ https://spreadsheets.google.com/feeds/"
@@ -93,19 +94,11 @@ class FormulaConverter:
     def _generator(self, description):
         ''' A generator returning dynamic coordinates with resolved variables created from the parsed description. '''
 
+        description = StaticCoordinate.filter(description)
         description = self._mask_orientation(description)
-
-        # TODO(KNR): Yuck... Adapted from StaticCoordinate, which is not aware of the silly masking
-        _LONGITUDE_PATTERN = '[|][NS][|]\s*\d{1,2}[°]?\s+\d{1,2}[.]\d{3}'
-        _LATTITUDE_PATTERN = '[|][EW][|]\s*\d{1,3}[°]?\s+\d{1,2}[.]\d{3}'
-        _PARTIAL_RE = re.compile('({longitude}|{lattitude})'.format(longitude=_LONGITUDE_PATTERN,
-                                                                    lattitude=_LATTITUDE_PATTERN))
 
         for match in re.finditer(self._dynamic_dimension_re, string=description):
             normalized_coordinates = self._normalize(match.group())
-
-            if re.search(_PARTIAL_RE, normalized_coordinates):
-                continue  # Don't treat static coordinates as formulae.
 
             # Get rid of orientation, which might be misinterpreted as variable otherwise.
             assert normalized_coordinates[1] in FormulaConverter._ORIENTATION
