@@ -134,7 +134,6 @@ class TestFormulaConverter(unittest.TestCase):
 
     def test_resolve_dynamic_dimension(self):
         expected = ['="N"&" "&47&"° "&( C2 - C3 )&"."&( C2 * C6 - C5 * C6 - 3 * C3 )']
-        # TODO(KNR): factor out variable_addresses generator
         converter = FormulaConverter(variable_addresses=TestFormulaConverter._SAMPLE_ADDRESSES)
         actual = converter.parse('N 47° [ B - C ].[ B x F - E x F - 3 x C ]')
         self.assertEqual(list(actual), expected)

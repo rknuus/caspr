@@ -12,11 +12,10 @@ import os
 import re
 
 from caspr.casprexception import CasprException
-from caspr.staticcoordinate import StaticCoordinate
 
 # NOTE: when changing the scope delete ~/.caspr/drive.json
 SCOPES = "https://docs.google.com/feeds/ https://docs.googleusercontent.com/ https://spreadsheets.google.com/feeds/"
-# TODO(KNR): figure out whether each user needs to register an own client secret and if so how to use it
+# TODO(KNR): because each user needs to register it's own key use generic key name client_secret.json
 CLIENT_SECRET_FILE = 'client_secret_61425214161-mo3vloo7gsroqkfmfb3agc5j5qhibkqv.apps.googleusercontent.com.json'
 APPLICATION_NAME = 'caspr'
 
@@ -32,19 +31,19 @@ class FormulaConverter:
     _OPENING_BRACES = '[([{]'
     _CLOSING_BRACES = '[)\]}]'
     _BRACES = '{opening}|{closing}'.format(opening=_OPENING_BRACES, closing=_CLOSING_BRACES)
-    _MATH_OPS = '[+\-/*]'  # Note: escape '-', otherwise it would be a range!
-    _CASUAL_MATH_OPS = '[:x]'  # TODO(KNR): not sure if there are some lunatics using even more operators
+    _MATH_OPS = '[+\-/*]'  # Note: escape '-', otherwise it would be a character range!
+    _CASUAL_MATH_OPS = '[:x]'
     # Beware: as the variables are only known at runtime need to format them before using _FORMULA
     _FORMULA = ('((?:\d|{braces}|{math_ops}|{casual_math_ops}|{variables})'
                 '(?:{ws}|\d|{braces}|{math_ops}|{casual_math_ops}|{variables})+)')
-    _ORIENTATION = '[NSOEW]'  # TODO(KNR): internationalize, currently EN and DE supported
+    _ORIENTATION = '[NSOE]'  # TODO(KNR): a bit sloppy to accept all 4 orientations independet of longitude/lattitude
     _DEGREE = '[°]'
     _DECIMAL_SEPARATOR = '[.,]'
     _MASK = '({orientation})({ws}*{formula}{ws}*{degree})'
     _FIX_MASK = '[|]({orientation})[|](?!{ws}*{formula}{ws}*{degree})'
     # Beware: as the variables are only known at runtime need to format them before using _DYNAMIC_DIMENSION
     # N 47° [ B - C ].[ B x F - E x F - 3 x C ]
-    # TODO(KNR): should replace last '*' by '{0,2}', but this results in a key error...
+    # Note: would like to replace last '*' by '{0,2}', but this results in a key error...
     _DYNAMIC_DIMENSION = (
         '[|]{orientation}[|]{ws}*{formula}{ws}*{degree}{ws}*{formula}{ws}*(?:{formula}{ws}*)?{separator}'
         '{ws}*{formula}(?:{ws}*{formula})*')
@@ -61,41 +60,27 @@ class FormulaConverter:
             raise CasprException('variable addresses dictionary must not be empty')
 
         self._variable_addresses = variable_addresses
-        self._formula = FormulaConverter._FORMULA.format(  # TODO(KNR): probably no need for a member variable
+        formula = FormulaConverter._FORMULA.format(
             ws=FormulaConverter._WS,
             braces=FormulaConverter._BRACES,
             math_ops=FormulaConverter._MATH_OPS,
             casual_math_ops=FormulaConverter._CASUAL_MATH_OPS,
             variables='[{0}]'.format(''.join(self._variable_addresses.keys())))
-        self._formula_re = re.compile(self._formula)
+        self._formula_re = re.compile(formula)
         self._dynamic_dimension = FormulaConverter._DYNAMIC_DIMENSION.format(
             ws=FormulaConverter._WS,
             orientation=FormulaConverter._ORIENTATION,
-            formula=self._formula,
+            formula=formula,
             degree=FormulaConverter._DEGREE,
             separator=FormulaConverter._DECIMAL_SEPARATOR)
         self._dynamic_dimension_re = re.compile(self._dynamic_dimension)
-        # self._dynamic_position = FormulaConverter._DYNAMIC_POSITION.format(  # TODO(KNR): probably no need for a member variable
-        #     ws=FormulaConverter._WS,
-        #     orientation=FormulaConverter._ORIENTATION,
-        #     formula=self._formula,
-        #     degree=FormulaConverter._DEGREE,
-        #     separator=FormulaConverter._DECIMAL_SEPARATOR)
-        # self._dynamic_position_re = re.compile(self._dynamic_position)
-        # self._dynamic_coordinate = FormulaConverter._DYNAMIC_COORDINATE.format(  # TODO(KNR): probably no need for a member variable
-        #     ws=FormulaConverter._WS,
-        #     orientation=FormulaConverter._ORIENTATION,
-        #     formula=self._formula,
-        #     degree=FormulaConverter._DEGREE,
-        #     separator=FormulaConverter._DECIMAL_SEPARATOR)
-        # self._dynamic_coordinate_re = re.compile(self._dynamic_coordinate)
         self._mask_re = re.compile(FormulaConverter._MASK.format(ws=FormulaConverter._WS,
                                                                  orientation=FormulaConverter._ORIENTATION,
-                                                                 formula=self._formula,
+                                                                 formula=formula,
                                                                  degree=FormulaConverter._DEGREE))
         self._fix_mask_re = re.compile(FormulaConverter._FIX_MASK.format(ws=FormulaConverter._WS,
                                                                          orientation=FormulaConverter._ORIENTATION,
-                                                                         formula=self._formula,
+                                                                         formula=formula,
                                                                          degree=FormulaConverter._DEGREE))
 
     def parse(self, description):
@@ -110,7 +95,7 @@ class FormulaConverter:
 
         description = self._mask_orientation(description)
 
-        # Yuk... Adapted from StaticCoordinate, which is not aware of the silly masking
+        # TODO(KNR): Yuck... Adapted from StaticCoordinate, which is not aware of the silly masking
         _LONGITUDE_PATTERN = '[|][NS][|]\s*\d{1,2}[°]?\s+\d{1,2}[.]\d{3}'
         _LATTITUDE_PATTERN = '[|][EW][|]\s*\d{1,3}[°]?\s+\d{1,2}[.]\d{3}'
         _PARTIAL_RE = re.compile('({longitude}|{lattitude})'.format(longitude=_LONGITUDE_PATTERN,
@@ -189,8 +174,7 @@ class FormulaConverter:
 
         # References for all other variables.
         for variable, index in self._variable_addresses.items():
-            if variable != 'C':  # TODO(KNR): figure out a list comprehension
-                # TODO(KNR): not sure if I may modify text or whether I should copy it first
+            if variable != 'C':  # TODO(KNR): can be avoided when using addressing scheme R1C1
                 text = text.replace(variable, 'C{0}'.format(index))
         return '{0}'.format(text)
 
@@ -305,8 +289,8 @@ class GoogleSheet:
         store = oauth2client.file.Storage(credential_path)
         credentials = store.get()
         if not credentials or credentials.invalid:
-            flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES,
-                                                  login_hint='morakn.caching@gmail.com')  # TODO(KNR): replace login_hint by a config value
+            # TODO(KNR): replace login_hint by a command line argument
+            flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES, login_hint='morakn.caching@gmail.com')
             flow.user_agent = APPLICATION_NAME
             credentials = tools.run(flow, store)
         return credentials

@@ -61,20 +61,16 @@ class DescriptionParser:
     def __init__(self):
         ''' Initializes a new object as empty. '''
 
-        # The following regular expression has some drawbacks:
-        # - It might mistake declarations like A = 1, B = 2 etc. for variable definitions.
-        # - If the same variable is defined multiple times (e.g. in multiple languages), it's not clear what to do.
-        # - It depends on newlines. It's not sure whether all cache authors use newlines.
-        self._assignment_re = re.compile('([A-Z]+ =)|\n')  # TODO(KNR: hard coded for now, but must be determined from data
+        self._assignment_re = re.compile('([A-Z]+ =)|\n')
         self._items = []
 
     def parse(self, description):
         ''' Parses the given description and returns an iterable list of tasks. '''
 
+        # TODO(KNR): alternatively store description as member variable and generate items in _generator()
         self._items = filter(None, self._assignment_re.split(description))
         return self._generator()
 
-    # TODO(KNR): consider to move to another module (would need to pass in the data as parameter)
     def _generator(self):
         ''' A generator returning tasks created from the parsed description. '''
 
@@ -105,7 +101,6 @@ class TableParser:
         self._descriptions = ['\n'.join(n.itertext()) for n in description_nodes if n.text.strip()]
         return self._generator()
 
-    # TODO(KNR): consider to move to another module (would need to pass in the data as parameter)
     def _generator(self):
         ''' A generator returning a dictionary created from the parsed page data. '''
 
@@ -144,8 +139,8 @@ class PageParser:
         # TODO(KNR): does etree provide iterparse()?
         root = html.parse(filename_or_url=page)
         desc_nodes = root.xpath("//span[@id='ctl00_ContentBody_LongDescription']//p")
-        # TODO(KNR): the following line works, but there must be a better way. Unfortunately there might be empty
-        # paragraphs, which spoil the description
+        # TODO(KNR): the following line works, but there must be a better way.
+        # Unfortunately there might be empty paragraphs, which spoil the description.
         self._description = '\n'.join(filter(None, [''.join(x for x in n.itertext()) for n in desc_nodes])).strip()
         pos_nodes = root.xpath("//span[@id='uxLatLon']")
         self._position = pos_nodes[0].text_content().strip()
@@ -153,16 +148,13 @@ class PageParser:
         self._name = cache_name_nodes[0].strip() if len(cache_name_nodes) > 0 else ''
 
         self._stages = self._table_parser.parse(root=root)
-        # TODO(KNR): train DescriptionParser using entry['description'] for each entry in self._stages
         return self._name, self._generator()
 
-    # TODO(KNR): consider to move to another module (would need to pass in the data as parameter)
     def _generator(self):
         ''' A generator returning stages created from the parsed page data. '''
 
         # Simply return the entire cache description as initial stage. For many multis this cache description contains
         # all stages, in which case the name of the type Stage is misleading...
-        # TODO(KNR): try to avoid redundant variable definitions in the cache description and the table
         yield Stage(name=self._name,
                     coordinates=self._position,
                     description=self._description,

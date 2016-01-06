@@ -3,6 +3,7 @@
 
 import argparse
 import logging
+import traceback
 
 from caspr.caches import Caches
 from caspr.geocachingdotcom import DescriptionParser, GeocachingSite, PageParser, TableParser
@@ -45,7 +46,5 @@ def main(args, stdout, stderr):
         # TODO(KNR): can I prevent argparse from returning a list of lists?
         for codes in arguments.cache_codes:
             caches.prepare(codes=codes)
-    except Exception as e:
-        # stderr.write(''.join(['Error: ', str(e), '\n']))
-        import traceback
+    except Exception:
         traceback.print_exc()
