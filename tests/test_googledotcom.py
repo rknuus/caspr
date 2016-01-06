@@ -117,7 +117,13 @@ class TestFormulaConverter(unittest.TestCase):
             self.assertTrue(re.match(dynamic_coordinates, given),
                             'dynamic coordinates {0} not recognized'.format(given))
 
-    def test_match_simple_dynamic_dimension(self):
+    def test_resolve_simple_dynamic_dimension(self):
+        expected = ['="N"&" "&47&"° "&( C2 - C3 )&"."&( C2 * C6 - C5 * C6 - 3 * C3 )']
+        converter = FormulaConverter(variable_addresses=TestFormulaConverter._SAMPLE_ADDRESSES)
+        actual = converter.parse('N 47° [ B - C ].[ B x F - E x F - 3 x C ]')
+        self.assertEqual(list(actual), expected)
+
+    def test_resolve_dynamic_dimensions_in_text(self):
         expected = ['="N"&" "&47&"° "&( C2 - C3 )&"."&( C2 * C6 - C5 * C6 - 3 * C3 )',
                     '="E"&" "&008&"° "&( C2 )&"."&( C6 * ( C2 + C4 + 2 ) + C2 + 2 )']
         converter = FormulaConverter(variable_addresses=TestFormulaConverter._SAMPLE_ADDRESSES)
@@ -130,10 +136,12 @@ class TestFormulaConverter(unittest.TestCase):
                                  'E 008° [ B ].[ F x ( B + D + 2 ) + B + 2 ]\n            ')
         self.assertEqual(list(actual), expected)
 
-    def test_resolve_dynamic_dimension(self):
-        expected = ['="N"&" "&47&"° "&( C2 - C3 )&"."&( C2 * C6 - C5 * C6 - 3 * C3 )']
+    def test_resolve_dynamic_coordinates(self):
+        given = 'Der Schatz liegt bei N 47° PQ.RST E 008° VW.XYZ, wobei'
+        expected = ['="N"&" "&47&"° "&(10*C16+1*C17)&"."&(100*C18+10*C19+1*C20) ',
+                    '="E"&" "&008&"° "&(10*C22+1*C23)&"."&(100*C24+10*C25+1*C26)']
         converter = FormulaConverter(variable_addresses=TestFormulaConverter._SAMPLE_ADDRESSES)
-        actual = converter.parse('N 47° [ B - C ].[ B x F - E x F - 3 x C ]')
+        actual = converter.parse(given)
         self.assertEqual(list(actual), expected)
 
     def test_match_static_coordinates(self):
@@ -175,14 +183,6 @@ class TestFormulaConverter(unittest.TestCase):
         converter = FormulaConverter(variable_addresses=TestFormulaConverter._SAMPLE_ADDRESSES)
         actual = converter._mask_orientation(given)
         self.assertEqual(actual, expected)
-
-    def test_experiment_with_full_dynamic_coordinates(self):
-        given = 'Der Schatz liegt bei N 47° PQ.RST E 008° VW.XYZ, wobei'
-        expected = ['="N"&" "&47&"° "&(10*C16+1*C17)&"."&(100*C18+10*C19+1*C20) ',
-                    '="E"&" "&008&"° "&(10*C22+1*C23)&"."&(100*C24+10*C25+1*C26)']
-        converter = FormulaConverter(variable_addresses=TestFormulaConverter._SAMPLE_ADDRESSES)
-        actual = converter.parse(given)
-        self.assertEqual(list(actual), expected)
 
 
 class TestGoogleSheet(unittest.TestCase):
