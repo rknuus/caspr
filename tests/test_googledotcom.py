@@ -49,26 +49,24 @@ class TestFormulaConverter(unittest.TestCase):
         actual = converter._resolve_formula(text='A + B - C * D / E', )
         self.assertEqual(actual, expected)
 
-    @unittest.skip('MOVING NORMALIZATION')
     def test_resolve_casual_math_operations_without_variable_conflict(self):
-        expected = 'C0 * C1 / C2'
+        expected = 'A * B / C'
         converter = FormulaConverter(variable_addresses={'A': 0, 'B': 1, 'C': 2})
-        actual = converter._resolve_formula(text='A x B / C')
+        actual = converter._normalize(text='A x B / C')
         self.assertEqual(actual, expected)
 
-    # not possible as long as variables are only upper case and casual * is only lower case.
+    # not possible as long as variables are only upper case and x (casual *) is only lower case.
     # def test_casual_math_operations_with_variable_conflict(self):
     #     expected = 'TBD'
     #     converter = FormulaConverter(variable_addresses={'A': 0, 'B': 1, 'x': 2})
     #     actual = converter._resolve_formula(text='A x B')
     #     self.assertEqual(actual, expected)
 
-    @unittest.skip('MOVING NORMALIZATION')
     def test_resolve_normalization_of_braces(self):
         expected = '()'
         converter = FormulaConverter(variable_addresses={'A': 0})
         for text in ['()', '{}', '[]']:
-            actual = converter._resolve_formula(text=text)
+            actual = converter._normalize(text=text)
             self.assertEqual(actual, expected)
 
     def test_resolve_dual_digit_variable(self):
