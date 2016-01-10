@@ -16,8 +16,6 @@ from caspr.staticcoordinate import StaticCoordinate
 
 # NOTE: when changing the scope delete ~/.caspr/drive.json
 SCOPES = "https://docs.google.com/feeds/ https://docs.googleusercontent.com/ https://spreadsheets.google.com/feeds/"
-# TODO(KNR): because each user needs to register it's own key use generic key name client_secret.json
-CLIENT_SECRET_FILE = 'client_secret_61425214161-mo3vloo7gsroqkfmfb3agc5j5qhibkqv.apps.googleusercontent.com.json'
 APPLICATION_NAME = 'caspr'
 
 
@@ -194,10 +192,10 @@ class GoogleSheet:
     Deals with Google Drive and the Google Docs Sheet.
     '''
 
-    def __init__(self):
+    def __init__(self, keyfile):
         ''' Authenticates with Google. '''
 
-        self._credentials = GoogleSheet._get_credentials()
+        self._credentials = GoogleSheet._get_credentials(keyfile)
         self._http = self._credentials.authorize(httplib2.Http())
         self._service = discovery.build('drive', 'v2', http=self._http)
         self._spreadsheets = gspread.authorize(self._credentials)
@@ -263,7 +261,7 @@ class GoogleSheet:
         return self._get_sheet(name=name)
 
     @staticmethod
-    def _get_credentials():
+    def _get_credentials(keyfile):
         '''
         Gets valid user credentials from storage.
 
@@ -284,7 +282,7 @@ class GoogleSheet:
         credentials = store.get()
         if not credentials or credentials.invalid:
             # TODO(KNR): replace login_hint by a command line argument
-            flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES, login_hint='morakn.caching@gmail.com')
+            flow = client.flow_from_clientsecrets(keyfile, SCOPES, login_hint='morakn.caching@gmail.com')
             flow.user_agent = APPLICATION_NAME
             credentials = tools.run(flow, store)
         return credentials

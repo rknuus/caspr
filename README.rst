@@ -37,7 +37,7 @@ Setup
 #. using a google account create a Google API Key for the API "Drive API" as
    described in https://wordpress.org/support/topic/how-to-get-a-google-api-key
    (sorry for the hassle, that's due to Google's API usage terms)
-#. download the client secret file and store it to <dir>/client_secret.json
+#. download the client secret file and remember the path for the caspr call
 
 
 Usage
@@ -45,11 +45,15 @@ Usage
 
 To run caspr open a terminal, change into <dir> (where you installed caspr) and
 enter:
-``python caspr.py -u <geocaching.com account> -p <geocaching password> <GC codes>``
+``python caspr.py -u <geocaching.com account> -p <geocaching password> -k <Google API key file> <GC codes>``
 
 The first time (and possibly from time to time) you are asked for a google
 authentication. Log in with the same account you used to create the Google API
 Key.
+
+The username, password, and Google API keyfile path are stored in a settings
+file. Unless you want to change them caspr calls are simpler now:
+``python caspr.py <GC codes>``
 
 
 Limitations

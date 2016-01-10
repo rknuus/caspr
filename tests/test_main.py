@@ -24,7 +24,7 @@ class TestCaspr(unittest.TestCase):
         stderr_mock = StringIO()
         with mock_stderr(stderr_mock):
             with self.assertRaises(SystemExit) as argparse_exception:
-                _parse_args([])
+                _parse_args([], {'user': '', 'password': '', 'keyfile': ''})
 
         self.assertEqual(argparse_exception.exception.code, 2)
-        self.assertIn("the following arguments are required: -u/--user, -p/--password, cache_codes", stderr_mock.getvalue())
+        self.assertIn("the following arguments are required: -u/--user, -p/--password, -k/--keyfile, cache_codes", stderr_mock.getvalue())
