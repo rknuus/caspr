@@ -66,8 +66,7 @@ So far caspr supports:
 - log-in to geocaching.com in German
 - extractions of variables and formulae from geocache description like GC30N6K
 - extractions of variables and formulae from  tables like GC2A62B
-- matching of formulae in WGS84 with floating point minutes like N 47° 03.204
-  and E A° B.CDE
+- matching of formulae in WGS84 with floating point minutes like N 47° 03.204 and E A° B.CDE
 - single characters as variables (e.g. A, B, X, Y, etc.) except 'x' which is
   interpreted as multiplication
 - English longitude and lattitude orientations (N, S, E, W)
