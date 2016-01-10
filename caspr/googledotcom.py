@@ -282,7 +282,7 @@ class GoogleSheet:
         credentials = store.get()
         if not credentials or credentials.invalid:
             # TODO(KNR): replace login_hint by a command line argument
-            flow = client.flow_from_clientsecrets(keyfile, SCOPES, login_hint='morakn.caching@gmail.com')
+            flow = client.flow_from_clientsecrets(keyfile, SCOPES)
             flow.user_agent = APPLICATION_NAME
             credentials = tools.run(flow, store)
         return credentials

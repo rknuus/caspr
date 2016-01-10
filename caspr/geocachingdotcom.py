@@ -74,7 +74,8 @@ class GeocachingSite:
         ''' Returns the page text of the geocache with the given code. '''
 
         page = self._session.get('http://www.geocaching.com/geocache/{0}'.format(code))
-        # TODO(KNR): why the heck does it not work when passing page.text to the lxml.html parser?! Probably some encoding issue
+        # TODO(KNR): why the heck does it not work when passing page.text to the lxml.html parser?!
+        #            Probably some encoding issue
         with tempfile.NamedTemporaryFile(delete=False) as file:
             file.write(bytes(page.text, 'UTF-8'))
             return file.name
