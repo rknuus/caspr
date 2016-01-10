@@ -12,7 +12,15 @@ class Caches:
 
     def prepare(self, codes):
         ''' Fetches the page for each geocaching code, parses it, and generates a sheet. '''
-        for code in codes:
-            page = self._site.fetch(code=code)
-            name, stages = self._parser.parse(page=page)
+
+        pages = (self._site.fetch(code=code) for code in codes)
+        # TODO(KNR): let _parser.parse() return a dict instead of a tuple, so we need to call parse() only once
+        #            this solves the need for zip() below
+        # TODO(KNR): add commit comment that http://www.dabeaz.com/generators-uk/GeneratorsUK.pdf recommends dicts
+        #            instead of tuples
+        name_and_stages_stream = (self._parser.parse(page=page) for page in pages)
+
+        # TODO(KNR): how to apply generate() call without explicitly iterating over names and stages?
+        for name, stages in name_and_stages_stream:
+            # TODO(KNR): before generation of the actual sheet generate a cell list
             self._generator.generate(name=name, stages=stages)

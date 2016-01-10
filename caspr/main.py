@@ -30,7 +30,7 @@ def _parse_args(args):
     parser.add_argument('cache_codes',
                         action='append',
                         nargs="+",
-                        help="1..N www.geocaching.com cache_codes like GC397CZ")
+                        help="1..N www.geocaching.com cache codes like GC397CZ")
     return parser.parse_args(args)
 
 
