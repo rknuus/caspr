@@ -63,6 +63,7 @@ is not able to correctly process all possible geocache descriptions. In this
 case the tool tries to support you as much as possible.
 
 So far caspr supports:
+
 - log-in to geocaching.com in German
 - extractions of variables and formulae from geocache description like GC30N6K
 - extractions of variables and formulae from  tables like GC2A62B
