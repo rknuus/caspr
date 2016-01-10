@@ -43,7 +43,6 @@ class FormulaConverter:
     _MASK = '({orientation})({ws}*{formula}{ws}*{degree})'
     _FIX_MASK = '[|]({orientation})[|](?!{ws}*{formula}{ws}*{degree})'
     # Beware: as the variables are only known at runtime need to format them before using _DYNAMIC_DIMENSION
-    # N 47° [ B - C ].[ B x F - E x F - 3 x C ]
     # Note: would like to replace last '*' by '{0,2}', but this results in a key error...
     _DYNAMIC_DIMENSION = (
         '[|]{orientation}[|]{ws}*{formula}{ws}*{degree}{ws}*{formula}{ws}*(?:{formula}{ws}*)?{separator}'

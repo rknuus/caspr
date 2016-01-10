@@ -15,7 +15,7 @@ class TestCaches(unittest.TestCase):
         code = 'ABCDEF'
         name = 'foo'
         site_mock.fetch = MagicMock(return_value='<html></html>')
-        parser_mock.parse = MagicMock(return_value=(name, parser_mock))
+        parser_mock.parse = MagicMock(return_value={'name': name, 'stages': parser_mock})
 
         caches = Caches(site=site_mock, parser=parser_mock, generator=generator_mock)
         caches.prepare([code])

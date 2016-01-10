@@ -155,14 +155,14 @@ class TestTableParser(unittest.TestCase):
         table_parser = TableParser()
         table_parser.parse(root=root)
         self.assertEqual(table_parser._names,
-                         ['\n                Stage 1: Schwanenplatz (Virtuelle Station)\n            ',
-                          '\n                Stage 2: Pavillion (Virtuelle Station)\n            ',
-                          '\n                Stage 3: Restaurant (Virtuelle Station)\n            ',
-                          '\n                Stage 4: Palace (Virtuelle Station)\n            ',
-                          '\n                Stage 5: Park (Virtuelle Station)\n            ',
-                          '\n                Stage 6: Abkühlung (Virtuelle Station)\n            ',
-                          '\n                Stage 7: Dichter und Patriot (Virtuelle Station)\n            ',
-                          '\n                Stage 8: Guisan (Virtuelle Station)\n            '])
+                         ['Stage 1: Schwanenplatz (Virtuelle Station)',
+                          'Stage 2: Pavillion (Virtuelle Station)',
+                          'Stage 3: Restaurant (Virtuelle Station)',
+                          'Stage 4: Palace (Virtuelle Station)',
+                          'Stage 5: Park (Virtuelle Station)',
+                          'Stage 6: Abkühlung (Virtuelle Station)',
+                          'Stage 7: Dichter und Patriot (Virtuelle Station)',
+                          'Stage 8: Guisan (Virtuelle Station)'])
         self.assertEqual(table_parser._coordinates,
                          ['\n                N 47° 03.204 E 008° 18.557\xa0\n                \n            ',
                           '\n                ???\xa0\n                \n            ',
@@ -173,14 +173,14 @@ class TestTableParser(unittest.TestCase):
                           '\n                ???\xa0\n                \n            ',
                           '\n                ???\xa0\n                \n            '])
         self.assertEqual(table_parser._descriptions, [
-            '\n                Halte nach einem grossen Schriftzug mit einer Krone Ausschau.\nA = wieviele Zacken hat die Krone?\nBCDEF = wandle den Namen nach dem System A=1, B=2... um\nLook out for a big lettering with a crown.\nA = amount of spikes of the crown\nBCDEF = transform the name according to the system A=1, B=2...\n__________________________________________\nRechne / \ncalculate:\nN 47° [ B - C ].[ B x F - E x F - 3 x C ]\nE 008° [ B ].[ F x ( B + D + 2 ) + B + 2 ]\n            ',
-            '\n                G = zähle die Anzahl \ngrüner\n Laternen?\nH = auf wie vielen Füssen stehen die beiden Springbrunnen insgesamt (Mittelsockel nicht mit gezählt)?\nG = number of \ngreen\n lamps?\nH = total amount of legs the two fountains are standing on (middle part not counted)?\n_____________________________________________\nRechne / \ncalculate:\nN 47° [ B - G ].[ 2 x G x H + 2 x G + 8 ]\nE 008° [ B ].[ GH x E - 4 + 100 ]\n            ',
-            '\n                IJKL = Name des Restaurants\nIJKL = name of the restaurant\n_____________________________________________\nRechne / \ncalculate:\nN 47° [ J - A ].[ 4 + 2 x G x 10 ]\nE 008° [ IJ + L ].[  IKL - A x E ]\n            ',
-            '\n                Du findest hier ein Schild von ca. 15x20cm Grösse mit mehreren Zahlen drauf (unten rechts steht "HD").\nOL/R=oben links/rechts | UL=unten links | MI=Mitte\nPeile:\n[OL]+[2xUL]+[UL nach Punkt] °\n[OR]-[2xOL]-[2xMI] m\n___________\nHere you\'ll find a marker of about 15x20cm with several numbers on it (bottom right stands "HD").\nTL/R=top left/right | BL=bottom left | MI=middle\nuse bearing function:\n[TL]+[2xBL]+[BL after dec. sep.] °\n[TR]-[2xTL]-[2xMI] m\n\n            ',
-            '\n                M = wie viele Personen und Tiere werden hier insgesamt ausgestellt?\nN = wie viele Füsse dieser Personen und Tiere kannst du erkennen?\nM = how many men and animals are here displayed in total?\nN = how many feet of this men and animals can you see?\n_____________________________________________\nRechne / \ncalculate:\nN 47° [ C / E ].[ F x ( J + L + I ) - I ]\nE 008° [ F - A ].[ N x F + B x D - L ]\n            ',
-            '\n                O = Anzahl Stufen, die ins Wasser führen\nP = Anzahl dreiflammige Laternen, die du von hier aus sehen kannst\nO = number of steps going into the water\nP = number of three arm lamps you can see from this spot\n_____________________________________________\nRechne / \ncalculate:\nN 47° [ O - L ].[ N x B + O + P ]\nE 008° [ D + K ].[ G x M x H + 2 x F + O + I ]\n            ',
-            '\n                Q = Alter des Dichters und Patrioten\nR = Anzahl der Buchstaben seines Vor- und Nachnamens\nQ = age of this poet and patriot\nR = amount of letters in his first and family name\n_____________________________________________\nRechne / \ncalculate:\nN 47° [ P - I ].[ 3 x Q + N + R ]\nE 008° [ LR ].[ Q x LO + N ]\n            ',
-            '\n                S = Todes- minus Geburtsjahr\nT = Anzahl Buchstaben "E" auf der Tafel\nS = year of his death minus year of his birth\nT = total amount of letters "E" on the memorial\n_____________________________________________\nRechne für den Final / \ncalculate for the final:\nN 47° [ 2 x L + I ].[ H x ( 2 x T + L ) + Q + K - 212 ]\nE 008° [ T + K + 1 ].[ S x R + DR - 813 ]\n            '
+            'Halte nach einem grossen Schriftzug mit einer Krone Ausschau.\nA = wieviele Zacken hat die Krone?\nBCDEF = wandle den Namen nach dem System A=1, B=2... um\nLook out for a big lettering with a crown.\nA = amount of spikes of the crown\nBCDEF = transform the name according to the system A=1, B=2...\n__________________________________________\nRechne / calculate:\nN 47° [ B - C ].[ B x F - E x F - 3 x C ]\nE 008° [ B ].[ F x ( B + D + 2 ) + B + 2 ]',
+            'G = zähle die Anzahl grüner Laternen?\nH = auf wie vielen Füssen stehen die beiden Springbrunnen insgesamt (Mittelsockel nicht mit gezählt)?\nG = number of green lamps?\nH = total amount of legs the two fountains are standing on (middle part not counted)?\n_____________________________________________\nRechne / calculate:\nN 47° [ B - G ].[ 2 x G x H + 2 x G + 8 ]\nE 008° [ B ].[ GH x E - 4 + 100 ]',
+            'IJKL = Name des Restaurants\nIJKL = name of the restaurant\n_____________________________________________\nRechne / calculate:\nN 47° [ J - A ].[ 4 + 2 x G x 10 ]\nE 008° [ IJ + L ].[  IKL - A x E ]',
+            'Du findest hier ein Schild von ca. 15x20cm Grösse mit mehreren Zahlen drauf (unten rechts steht "HD").\nOL/R=oben links/rechts | UL=unten links | MI=Mitte\nPeile:\n[OL]+[2xUL]+[UL nach Punkt] °\n[OR]-[2xOL]-[2xMI] m\n___________\nHere you\'ll find a marker of about 15x20cm with several numbers on it (bottom right stands "HD").\nTL/R=top left/right | BL=bottom left | MI=middle\nuse bearing function:\n[TL]+[2xBL]+[BL after dec. sep.] °\n[TR]-[2xTL]-[2xMI] m',
+            'M = wie viele Personen und Tiere werden hier insgesamt ausgestellt?\nN = wie viele Füsse dieser Personen und Tiere kannst du erkennen?\nM = how many men and animals are here displayed in total?\nN = how many feet of this men and animals can you see?\n_____________________________________________\nRechne / calculate:\nN 47° [ C / E ].[ F x ( J + L + I ) - I ]\nE 008° [ F - A ].[ N x F + B x D - L ]',
+            'O = Anzahl Stufen, die ins Wasser führen\nP = Anzahl dreiflammige Laternen, die du von hier aus sehen kannst\nO = number of steps going into the water\nP = number of three arm lamps you can see from this spot\n_____________________________________________\nRechne / calculate:\nN 47° [ O - L ].[ N x B + O + P ]\nE 008° [ D + K ].[ G x M x H + 2 x F + O + I ]',
+            'Q = Alter des Dichters und Patrioten\nR = Anzahl der Buchstaben seines Vor- und Nachnamens\nQ = age of this poet and patriot\nR = amount of letters in his first and family name\n_____________________________________________\nRechne / calculate:\nN 47° [ P - I ].[ 3 x Q + N + R ]\nE 008° [ LR ].[ Q x LO + N ]',
+            'S = Todes- minus Geburtsjahr\nT = Anzahl Buchstaben "E" auf der Tafel\nS = year of his death minus year of his birth\nT = total amount of letters "E" on the memorial\n_____________________________________________\nRechne für den Final / calculate for the final:\nN 47° [ 2 x L + I ].[ H x ( 2 x T + L ) + Q + K - 212 ]\nE 008° [ T + K + 1 ].[ S x R + DR - 813 ]'
         ])
 
 

@@ -11,6 +11,31 @@ from caspr.staticcoordinate import StaticCoordinate
 from caspr.stage import Stage, Task
 
 
+def get_single_line_texts(nodes):
+    ''' Returns the texts of the given nodes including their children's texts as single lines. '''
+
+    return list(filter(None, [' '.join(c.strip() for c in n.itertext()).strip() for n in nodes]))
+
+
+def flatten(iterables):
+    return (item for sublist in iterables for item in sublist)
+
+
+def get_multi_line_texts(nodes):
+    ''' Returns the texts of the given nodes including their children's texts as multiple lines. '''
+
+    breaks = (n.xpath('.//br') for n in nodes)
+    breaks = flatten(breaks)
+    for br in breaks:
+        br.tail = '\n' + br.tail if br.tail else '\n'
+    texts = (n.text_content() for n in nodes)
+    texts = (t.strip() for t in texts)
+    texts = (re.sub(r'[ \t]*[\n\r]+[ \t]*', '\n', t) for t in texts)
+    texts = (text for text in texts if text.strip())
+
+    return list(filter(None, texts))
+
+
 class GeocachingSite:
     ''' Deals with the www.geocaching.com site. '''
 
@@ -94,11 +119,10 @@ class TableParser:
         '''
 
         stage_name_nodes = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=6]")
-        # TODO(KNR): the following line works, but there must be a better way
-        self._names = [''.join(x for x in n.itertext()) for n in stage_name_nodes]
+        self._names = get_single_line_texts(stage_name_nodes)
         self._coordinates = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=7]/text()")
         description_nodes = root.xpath("//table[@id='ctl00_ContentBody_Waypoints']/tbody/tr/td[position()=3]")
-        self._descriptions = ['\n'.join(n.itertext()) for n in description_nodes if n.text.strip()]
+        self._descriptions = get_multi_line_texts(description_nodes)
         return self._generator()
 
     def _generator(self):
@@ -136,19 +160,16 @@ class PageParser:
         '''
 
         # TODO(KNR): does defusedxml also work?
-        # TODO(KNR): does etree provide iterparse()?
-        root = html.parse(filename_or_url=page)
+        root = html.parse(filename_or_url=page).getroot()  # Apparently lxml.html does not provide iterparse().
         desc_nodes = root.xpath("//span[@id='ctl00_ContentBody_LongDescription']//p")
-        # TODO(KNR): the following line works, but there must be a better way.
-        # Unfortunately there might be empty paragraphs, which spoil the description.
-        self._description = '\n'.join(filter(None, [''.join(x for x in n.itertext()) for n in desc_nodes])).strip()
+        self._description = '\n'.join(get_multi_line_texts(desc_nodes))
         pos_nodes = root.xpath("//span[@id='uxLatLon']")
         self._position = pos_nodes[0].text_content().strip()
         cache_name_nodes = root.xpath("//title[position()=1]/text()")
-        self._name = cache_name_nodes[0].strip() if len(cache_name_nodes) > 0 else ''
+        self._name = cache_name_nodes[0].strip() or ''
 
         self._stages = self._table_parser.parse(root=root)
-        return self._name, self._generator()
+        return {'name': self._name, 'stages': self._generator()}
 
     def _generator(self):
         ''' A generator returning stages created from the parsed page data. '''
