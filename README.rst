@@ -8,13 +8,7 @@ geocache. It converts a https://www.geocaching.com geocache description into a
 Google Docs sheet where you can enter the answers to the questions. The sheet
 then performs most intermediate and final coordinate calculations for you.
 
-
-Warning
-=======
-
-CAche Sheet PReparation is work in progress! So far it supports geocaches with
-formulae in the geocache description like GC30N6K as well as geocaches with
-formulae in tables like GC2A62B.
+Beware that CAche Sheet PReparation is work in progress!
 
 
 Description
@@ -68,6 +62,19 @@ As the multi-stage descriptions are structured in many different ways, the tool
 is not able to correctly process all possible geocache descriptions. In this
 case the tool tries to support you as much as possible.
 
+So far caspr supports:
+- log-in to geocaching.com in German
+- extractions of variables and formulae from geocache description like GC30N6K
+- extractions of variables and formulae from  tables like GC2A62B
+- matching of formulae in WGS84 with floating point minutes like N 47° 03.204
+  and E A° B.CDE
+- single characters as variables (e.g. A, B, X, Y, etc.) except 'x' which is
+  interpreted as multiplication
+- English longitude and lattitude orientations (N, S, E, W)
+- simple mathematical operations +,-,: or /,* or x in formulae
+- braces and brackets like {}, [], and (), but only in the lower ASCII range
+- merging of duplicate variable definitions
+- casual chaining of variables, e.g. AB is interpreted as 10*A+1*B
 
 
 Note

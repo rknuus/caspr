@@ -288,8 +288,8 @@ class TestGoogleSheet(unittest.TestCase):
                                      coordinates='c2',
                                      description='sd2',
                                      tasks=[Task(description='d3',
-                                                 variables='x'), Task(description='d4',
-                                                                      variables='y')])])
+                                                 variables='y'), Task(description='d4',
+                                                                      variables='z')])])
         self.assertIn(call.add_worksheet().update_acell('A1', 'n1'), worksheet_mock.mock_calls)
         self.assertIn(call.add_worksheet().update_acell('B1', 'c1'), worksheet_mock.mock_calls)
         self.assertIn(call.add_worksheet().update_acell('A2', 'sd1'), worksheet_mock.mock_calls)
@@ -301,9 +301,9 @@ class TestGoogleSheet(unittest.TestCase):
         self.assertIn(call.add_worksheet().update_acell('B5', 'c2'), worksheet_mock.mock_calls)
         self.assertIn(call.add_worksheet().update_acell('A6', 'sd2'), worksheet_mock.mock_calls)
         self.assertIn(call.add_worksheet().update_acell('A7', 'd3'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B7', 'x'), worksheet_mock.mock_calls)
+        self.assertIn(call.add_worksheet().update_acell('B7', 'y'), worksheet_mock.mock_calls)
         self.assertIn(call.add_worksheet().update_acell('A8', 'd4'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B8', 'y'), worksheet_mock.mock_calls)
+        self.assertIn(call.add_worksheet().update_acell('B8', 'z'), worksheet_mock.mock_calls)
 
     def test_generate_fills_in_a_stage_with_one_multi_variable_task(self):
         sheet = GoogleSheetFake()

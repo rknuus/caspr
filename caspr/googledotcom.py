@@ -93,6 +93,8 @@ class FormulaConverter:
     def _generator(self, description):
         ''' A generator returning dynamic coordinates with resolved variables created from the parsed description. '''
 
+        assert 'x' not in self._variable_addresses, "'x' as variable name is currently not supported"
+
         description = StaticCoordinate.filter(description)
         description = self._mask_orientation(description)
 

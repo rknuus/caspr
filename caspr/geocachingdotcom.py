@@ -161,8 +161,8 @@ class PageParser:
 
         # TODO(KNR): does defusedxml also work?
         root = html.parse(filename_or_url=page).getroot()  # Apparently lxml.html does not provide iterparse().
-        desc_nodes = root.xpath("//span[@id='ctl00_ContentBody_LongDescription']//p")
-        self._description = '\n'.join(get_multi_line_texts(desc_nodes))
+        description_nodes = root.xpath("//span[@id='ctl00_ContentBody_LongDescription']//p")
+        self._description = '\n'.join(get_multi_line_texts(description_nodes))
         pos_nodes = root.xpath("//span[@id='uxLatLon']")
         self._position = pos_nodes[0].text_content().strip()
         cache_name_nodes = root.xpath("//title[position()=1]/text()")
