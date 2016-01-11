@@ -93,15 +93,15 @@ class DescriptionParser:
     def parse(self, description):
         ''' Parses the given description and returns an iterable list of tasks. '''
 
-        # TODO(KNR): alternatively store description as member variable and generate items in _generator()
-        self._items = filter(None, self._assignment_re.split(description))
+        self._description = description
         return self._generator()
 
     def _generator(self):
         ''' A generator returning tasks created from the parsed description. '''
 
         variables = ''
-        for item in self._items:
+        items = filter(None, self._assignment_re.split(self._description))
+        for item in items:
             if self._assignment_re.match(item):
                 variables = item.replace('=', '').strip()
             elif variables:

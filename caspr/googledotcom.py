@@ -213,28 +213,28 @@ class GoogleSheet:
         old_sheet = worksheet.sheet1
         # TODO(KNR): Don't know how to rename and Google API rejects adding a sheet with the same name
         #            (even ignoring case).
-        sheet_name = ("stages" if worksheet.sheet1.title == "calculations" else "calculations")
+        sheet_name = ('calculations02' if worksheet.sheet1.title == 'calculations01' else 'calculations01')
         sheet = worksheet.add_worksheet(title=sheet_name, rows=1000, cols=26)
         worksheet.del_worksheet(old_sheet)
-        index = 0
+        row = 0
         variable_addresses = {}
-        for stage_number, stage in enumerate(stages):
-            index += 1
-            sheet.update_acell('A{0}'.format(index), stage.name)
-            sheet.update_acell('B{0}'.format(index), stage.coordinates)
-            index += 1
-            sheet.update_acell('A{0}'.format(index), stage.description)
-            formula_row = index
+        for stage in stages:
+            row += 1
+            sheet.update_acell('A{0}'.format(row), stage.name)
+            sheet.update_acell('B{0}'.format(row), stage.coordinates)
+            row += 1
+            sheet.update_acell('A{0}'.format(row), stage.description)
+            formula_row = row
             for task in stage.tasks:
                 for variable in task.variables:
                     if variable not in variable_addresses:
-                        index += 1
-                        sheet.update_acell('A{0}'.format(index), task.description)
-                        variable_addresses[variable] = index
-                        sheet.update_acell('B{0}'.format(index), variable)
+                        row += 1
+                        sheet.update_acell('A{0}'.format(row), task.description)
+                        variable_addresses[variable] = row
+                        sheet.update_acell('B{0}'.format(row), variable)
                     else:  # merge the task description into the existing task description
-                        variable_index = variable_addresses[variable]
-                        address = 'A{0}'.format(variable_index)
+                        variable_row = variable_addresses[variable]
+                        address = 'A{0}'.format(variable_row)
                         value = '{0}\n{1}'.format(sheet.acell(address).value, task.description)
                         sheet.update_acell(address, value)
             if variable_addresses:
