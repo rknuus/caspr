@@ -10,7 +10,7 @@ import traceback
 
 from caspr.caches import Caches
 from caspr.geocachingdotcom import DescriptionParser, GeocachingSite, PageParser, TableParser
-from caspr.googledotcom import GoogleSheet
+from caspr.googledotcom import WorksheetFactory
 
 __author__ = "Raphael Knaus"
 __copyright__ = "Raphael Knaus"
@@ -71,11 +71,10 @@ def main(args, stdout, stderr):
     arguments = _parse_args(args, _load_defaults())
     try:
         _save_defaults(arguments)
-        site = GeocachingSite(user=arguments.user, password=arguments.password)
-        caches = Caches(site=site,
+        caches = Caches(site=GeocachingSite(user=arguments.user, password=arguments.password),
                         parser=PageParser(table_parser=TableParser(),
                                           description_parser=DescriptionParser()),
-                        generator=GoogleSheet(keyfile=arguments.keyfile))
+                        factory=WorksheetFactory(keyfile=arguments.keyfile))
         # TODO(KNR): can I prevent argparse from returning a list of lists?
         for codes in arguments.cache_codes:
             caches.prepare(codes=codes)

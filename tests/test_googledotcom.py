@@ -7,11 +7,11 @@ import re
 import unittest
 
 from caspr.casprexception import CasprException
-from caspr.googledotcom import FormulaConverter, GoogleSheet
+from caspr.googledotcom import FormulaConverter, WorksheetFactory, publish
 from caspr.stage import Stage, Task
 
 
-class GoogleSheetFake(GoogleSheet):
+class WorksheetFactoryFake(WorksheetFactory):
     def __init__(self):
         self._credentials = MagicMock()
         self._http = MagicMock()
@@ -25,7 +25,7 @@ class Anything:
 
 
 class TestFormulaConverter(unittest.TestCase):
-    _SAMPLE_ADDRESSES = dict(zip(map(chr, range(ord('A'), ord('Z')+1)), range(1, 27)))
+    _SAMPLE_ADDRESSES = dict(zip(map(chr, range(ord('A'), ord('Z') + 1)), range(1, 27)))
 
     def test_constructor_raises_if_dictionary_empty(self):
         with self.assertRaises(CasprException):
@@ -185,207 +185,200 @@ class TestFormulaConverter(unittest.TestCase):
         self.assertEqual(actual, expected)
 
 
-class TestGoogleSheet(unittest.TestCase):
+class TestWorksheetFactory(unittest.TestCase):
     def test_generate_creates_new_sheet_if_not_exists(self):
-        sheet = GoogleSheetFake()
-        sheet._service.files = MagicMock()
-        worksheet_mock = MagicMock()
-        sheet._spreadsheets.open.side_effect = [gspread.SpreadsheetNotFound, worksheet_mock]
-        sheet.generate(name='GCFOO', stages=[])
-        self.assertTrue(sheet._service.files.called)
-        self.assertEqual(sheet._service.files.mock_calls, [
-            call(), call().insert(body={'mimeType': 'application/vnd.google-apps.spreadsheet',
-                                        'title': 'GCFOO'}), call().insert().execute(http=Anything())
-        ])
+        factory = WorksheetFactoryFake()
+        factory._get_sheet = MagicMock(return_value=None)
+        factory._create_new_sheet = MagicMock(return_value=MagicMock())
+        publish(name='irrelevant', stages=[], factory=factory)
+        self.assertTrue(factory._create_new_sheet.called)
 
     def test_generate_does_not_create_new_sheet_if_exists(self):
-        sheet = GoogleSheetFake()
-        worksheet_mock = MagicMock()
-        sheet._spreadsheets.open = MagicMock(return_value=worksheet_mock)
-        sheet._service.files = MagicMock()
-        sheet.generate(name='irrelevant', stages=[])
-        self.assertFalse(sheet._service.files.called)
+        factory = WorksheetFactoryFake()
+        factory._get_sheet = MagicMock(return_value=MagicMock())
+        factory._create_new_sheet = MagicMock(return_value=None)
+        publish(name='irrelevant', stages=[], factory=factory)
+        self.assertFalse(factory._create_new_sheet.called)
 
     def test_generate_fills_in_a_stage_without_tasks(self):
-        sheet = GoogleSheetFake()
         worksheet_mock = MagicMock()
-        sheet._spreadsheets.open = MagicMock(return_value=worksheet_mock)
-        sheet.generate(name='irrelevant',
-                       stages=[Stage(name='name',
-                                     coordinates='coordinates',
-                                     description='stage description',
-                                     tasks=[])])
-        self.assertIn(call.add_worksheet().update_acell('A1', 'name'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B1', 'coordinates'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A2', 'stage description'), worksheet_mock.mock_calls)
+        factory = WorksheetFactoryFake()
+        factory.create = MagicMock(return_value=worksheet_mock)
+        publish(name='irrelevant',
+                stages=[Stage(name='name',
+                              coordinates='coordinates',
+                              description='stage description',
+                              tasks=[])],
+                factory=factory)
+        self.assertIn(call.update_cell(row=1, col=1, val='name'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=1, col=2, val='coordinates'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=2, col=1, val='stage description'), worksheet_mock.mock_calls)
 
     def test_generate_fills_in_two_stages_without_tasks(self):
-        sheet = GoogleSheetFake()
         worksheet_mock = MagicMock()
-        sheet._spreadsheets.open = MagicMock(return_value=worksheet_mock)
-        sheet.generate(name='irrelevant',
-                       stages=[Stage(name='n1',
-                                     coordinates='c1',
-                                     description='sd1',
-                                     tasks=[]), Stage(name='n2',
-                                                      coordinates='c2',
-                                                      description='sd2',
-                                                      tasks=[])])
-        self.assertIn(call.add_worksheet().update_acell('A1', 'n1'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B1', 'c1'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A2', 'sd1'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A3', 'n2'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B3', 'c2'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A4', 'sd2'), worksheet_mock.mock_calls)
+        factory = WorksheetFactoryFake()
+        factory.create = MagicMock(return_value=worksheet_mock)
+        publish(name='irrelevant',
+                stages=[Stage(name='n1',
+                              coordinates='c1',
+                              description='sd1',
+                              tasks=[]), Stage(name='n2',
+                                               coordinates='c2',
+                                               description='sd2',
+                                               tasks=[])],
+                factory=factory)
+        self.assertIn(call.update_cell(row=1, col=1, val='n1'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=1, col=2, val='c1'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=2, col=1, val='sd1'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=3, col=1, val='n2'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=3, col=2, val='c2'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=4, col=1, val='sd2'), worksheet_mock.mock_calls)
 
     def test_generate_fills_in_a_stage_with_single_task(self):
-        sheet = GoogleSheetFake()
         worksheet_mock = MagicMock()
-        sheet._spreadsheets.open = MagicMock(return_value=worksheet_mock)
-        sheet.generate(name='irrelevant',
-                       stages=[Stage(name='name',
-                                     coordinates='coordinates',
-                                     description='stage description',
-                                     tasks=[Task(description='description',
-                                                 variables='v')])])
-        self.assertIn(call.add_worksheet().update_acell('A1', 'name'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B1', 'coordinates'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A2', 'stage description'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A3', 'description'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B3', 'v'), worksheet_mock.mock_calls)
+        factory = WorksheetFactoryFake()
+        factory.create = MagicMock(return_value=worksheet_mock)
+        publish(name='irrelevant',
+                stages=[Stage(name='name',
+                              coordinates='coordinates',
+                              description='stage description',
+                              tasks=[Task(description='description',
+                                          variables='v')])],
+                factory=factory)
+        self.assertIn(call.update_cell(row=1, col=1, val='name'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=1, col=2, val='coordinates'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=2, col=1, val='stage description'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=3, col=1, val='description'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=3, col=2, val='v'), worksheet_mock.mock_calls)
 
     def test_generate_fills_in_a_stage_with_two_tasks(self):
-        sheet = GoogleSheetFake()
         worksheet_mock = MagicMock()
-        sheet._spreadsheets.open = MagicMock(return_value=worksheet_mock)
-        sheet.generate(name='irrelevant',
-                       stages=[Stage(name='name',
-                                     coordinates='coordinates',
-                                     description='sd',
-                                     tasks=[Task(description='d1',
-                                                 variables='v'), Task(description='d2',
-                                                                      variables='w')])])
-        self.assertIn(call.add_worksheet().update_acell('A1', 'name'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B1', 'coordinates'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A2', 'sd'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A3', 'd1'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B3', 'v'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A4', 'd2'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B4', 'w'), worksheet_mock.mock_calls)
+        factory = WorksheetFactoryFake()
+        factory.create = MagicMock(return_value=worksheet_mock)
+        publish(name='irrelevant',
+                stages=[Stage(name='name',
+                              coordinates='coordinates',
+                              description='sd',
+                              tasks=[Task(description='d1',
+                                          variables='v'), Task(description='d2',
+                                                               variables='w')])],
+                factory=factory)
+        self.assertIn(call.update_cell(row=1, col=1, val='name'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=1, col=2, val='coordinates'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=2, col=1, val='sd'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=3, col=1, val='d1'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=3, col=2, val='v'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=4, col=1, val='d2'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=4, col=2, val='w'), worksheet_mock.mock_calls)
 
     def test_generate_fills_in_two_stages_with_two_tasks(self):
-        sheet = GoogleSheetFake()
         worksheet_mock = MagicMock()
-        sheet._spreadsheets.open = MagicMock(return_value=worksheet_mock)
-        sheet.generate(name='irrelevant',
-                       stages=[Stage(name='n1',
-                                     coordinates='c1',
-                                     description='sd1',
-                                     tasks=[Task(description='d1',
-                                                 variables='v'), Task(description='d2',
-                                                                      variables='w')]),
-                               Stage(name='n2',
-                                     coordinates='c2',
-                                     description='sd2',
-                                     tasks=[Task(description='d3',
-                                                 variables='y'), Task(description='d4',
-                                                                      variables='z')])])
-        self.assertIn(call.add_worksheet().update_acell('A1', 'n1'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B1', 'c1'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A2', 'sd1'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A3', 'd1'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B3', 'v'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A4', 'd2'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B4', 'w'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A5', 'n2'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B5', 'c2'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A6', 'sd2'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A7', 'd3'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B7', 'y'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A8', 'd4'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B8', 'z'), worksheet_mock.mock_calls)
+        factory = WorksheetFactoryFake()
+        factory.create = MagicMock(return_value=worksheet_mock)
+        # from nose.tools import set_trace; set_trace()
+        publish(name='irrelevant',
+                stages=[Stage(name='n1',
+                              coordinates='c1',
+                              description='sd1',
+                              tasks=[Task(description='d1',
+                                          variables='v'), Task(description='d2',
+                                                               variables='w')]), Stage(name='n2',
+                                                                                       coordinates='c2',
+                                                                                       description='sd2',
+                                                                                       tasks=[Task(description='d3',
+                                                                                                   variables='y'),
+                                                                                              Task(description='d4',
+                                                                                                   variables='z')])],
+                factory=factory)
+        self.assertIn(call.update_cell(row=1, col=1, val='n1'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=1, col=2, val='c1'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=2, col=1, val='sd1'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=3, col=1, val='d1'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=3, col=2, val='v'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=4, col=1, val='d2'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=4, col=2, val='w'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=6, col=1, val='n2'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=6, col=2, val='c2'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=7, col=1, val='sd2'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=8, col=1, val='d3'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=8, col=2, val='y'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=9, col=1, val='d4'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=9, col=2, val='z'), worksheet_mock.mock_calls)
 
     def test_generate_fills_in_a_stage_with_one_multi_variable_task(self):
-        sheet = GoogleSheetFake()
         worksheet_mock = MagicMock()
-        sheet._spreadsheets.open = MagicMock(return_value=worksheet_mock)
-        sheet.generate(name='irrelevant',
-                       stages=[Stage(name='name',
-                                     coordinates='coordinates',
-                                     description='stage description',
-                                     tasks=[Task(description='description',
-                                                 variables='vw')])])
-        self.assertIn(call.add_worksheet().update_acell('A1', 'name'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B1', 'coordinates'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A2', 'stage description'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A3', 'description'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B3', 'v'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B4', 'w'), worksheet_mock.mock_calls)
+        factory = WorksheetFactoryFake()
+        factory.create = MagicMock(return_value=worksheet_mock)
+        publish(name='irrelevant',
+                stages=[Stage(name='name',
+                              coordinates='coordinates',
+                              description='stage description',
+                              tasks=[Task(description='description',
+                                          variables='vw')])],
+                factory=factory)
+        self.assertIn(call.update_cell(row=1, col=1, val='name'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=1, col=2, val='coordinates'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=2, col=1, val='stage description'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=3, col=1, val='description'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=3, col=2, val='v'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=4, col=2, val='w'), worksheet_mock.mock_calls)
 
     def test_generate_fills_in_complex_stages(self):
-        sheet = GoogleSheetFake()
         worksheet_mock = MagicMock()
-        sheet._spreadsheets.open = MagicMock(return_value=worksheet_mock)
-        sheet.generate(name='irrelevant',
-                       stages=[Stage(name='n1',
-                                     coordinates='c1',
-                                     description='sd1',
-                                     tasks=[Task(description='d1',
-                                                 variables='abc'), Task(description='d2',
-                                                                        variables='d')]),
-                               Stage(name='n2',
-                                     coordinates='c2',
-                                     description='sd2',
-                                     tasks=[Task(description='d3',
-                                                 variables='e'), Task(description='d4',
-                                                                      variables='fghi')])])
-        self.assertIn(call.add_worksheet().update_acell('A1', 'n1'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B1', 'c1'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A2', 'sd1'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A3', 'd1'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B3', 'a'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B4', 'b'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B5', 'c'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A6', 'd2'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B6', 'd'), worksheet_mock.mock_calls)
+        factory = WorksheetFactoryFake()
+        factory.create = MagicMock(return_value=worksheet_mock)
+        publish(name='irrelevant',
+                stages=[Stage(name='n1',
+                              coordinates='c1',
+                              description='sd1',
+                              tasks=[Task(description='d1',
+                                          variables='abc'), Task(description='d2',
+                                                                 variables='d')]),
+                        Stage(name='n2',
+                              coordinates='c2',
+                              description='sd2',
+                              tasks=[Task(description='d3',
+                                          variables='e'), Task(description='d4',
+                                                               variables='fghi')])],
+                factory=factory)
+        self.assertIn(call.update_cell(row=1, col=1, val='n1'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=1, col=2, val='c1'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=2, col=1, val='sd1'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=3, col=1, val='d1'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=3, col=2, val='a'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=4, col=2, val='b'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=5, col=2, val='c'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=6, col=1, val='d2'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=6, col=2, val='d'), worksheet_mock.mock_calls)
 
-        self.assertIn(call.add_worksheet().update_acell('A7', 'n2'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B7', 'c2'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A8', 'sd2'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A9', 'd3'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B9', 'e'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('A10', 'd4'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B10', 'f'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B11', 'g'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B12', 'h'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B13', 'i'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=8, col=1, val='n2'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=8, col=2, val='c2'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=9, col=1, val='sd2'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=10, col=1, val='d3'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=10, col=2, val='e'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=11, col=1, val='d4'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=11, col=2, val='f'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=12, col=2, val='g'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=13, col=2, val='h'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=14, col=2, val='i'), worksheet_mock.mock_calls)
 
     def test_merge_duplicate_variables_per_stage(self):
-        class AttrDict(dict):
-            ''' Hack to allow attribute-like access to dictionary. '''
-
-            def __init__(self, *args, **kwargs):
-                super(AttrDict, self).__init__(*args, **kwargs)
-                self.__dict__ = self
-
-        sheet = GoogleSheetFake()
         worksheet_mock = MagicMock()
-        cell_mock = AttrDict()
-        cell_mock.value = 'd1'
-        worksheet_mock.add_worksheet().acell.return_value = cell_mock
-        sheet._spreadsheets.open = MagicMock(return_value=worksheet_mock)
-        sheet.generate(name='irrelevant',
-                       stages=[Stage(name='irrelevant',
-                                     coordinates='irrelevant',
-                                     description='irrelevant',
-                                     tasks=[Task(description='d1',
-                                                 variables='abc'), Task(description='d2',
-                                                                        variables='abc')])])
-        self.assertIn(call.add_worksheet().update_acell('A3', 'd1\nd2'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B3', 'a'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B4', 'b'), worksheet_mock.mock_calls)
-        self.assertIn(call.add_worksheet().update_acell('B5', 'c'), worksheet_mock.mock_calls)
-        self.assertNotIn(call.add_worksheet().update_acell('A6', 'd2'), worksheet_mock.mock_calls)
-        self.assertNotIn(call.add_worksheet().update_acell('B6', 'a'), worksheet_mock.mock_calls)
+        factory = WorksheetFactoryFake()
+        factory.create = MagicMock(return_value=worksheet_mock)
+        publish(name='irrelevant',
+                stages=[Stage(name='irrelevant',
+                              coordinates='irrelevant',
+                              description='irrelevant',
+                              tasks=[Task(description='d1',
+                                          variables='abc'), Task(description='d2',
+                                                                 variables='abc')])],
+                factory=factory)
+        self.assertIn(call.update_cell(row=3, col=1, val='d1\nd2'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=3, col=2, val='a'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=4, col=2, val='b'), worksheet_mock.mock_calls)
+        self.assertIn(call.update_cell(row=5, col=2, val='c'), worksheet_mock.mock_calls)
+        self.assertNotIn(call.update_cell(row=6, col=1, val='d2'), worksheet_mock.mock_calls)
+        self.assertNotIn(call.update_cell(row=6, col=2, val='a'), worksheet_mock.mock_calls)
 
     # TODO(KNR): test the entire authentication

@@ -12,6 +12,7 @@ import os
 import re
 
 from caspr.casprexception import CasprException
+from caspr.generatortools import generate_concatenation
 from caspr.staticcoordinate import StaticCoordinate
 
 # NOTE: when changing the scope delete ~/.caspr/drive.json
@@ -83,13 +84,13 @@ class FormulaConverter:
 
     def parse(self, description):
         '''
-        Parses the given description and returns an iterable list of dynamic coordinates with resolved variables.
+        Parses the given description and returns an iterable list of dynamic coordinates with resolved descriptions.
         '''
 
         return self._generator(description=description)
 
     def _generator(self, description):
-        ''' A generator returning dynamic coordinates with resolved variables created from the parsed description. '''
+        ''' A generator returning dynamic coordinates with resolved descriptions created from the parsed description. '''
 
         assert 'x' not in self._variable_addresses, "'x' as variable name is currently not supported"
 
@@ -120,7 +121,7 @@ class FormulaConverter:
 
         Required to:
         - properly terminate combined lattitude & longitude.
-        - avoid accidental replacement of orientation if there are variables with names like orientations (e.g. N or E).
+        - avoid accidental replacement of orientation if there are descriptions with names like orientations (e.g. N or E).
         '''
 
         # TODO(KNR): there has to be a simpler way, this is really cheesy
@@ -138,7 +139,7 @@ class FormulaConverter:
 
         # Normalize casual mathematical operations.
         text = text.replace(':', '/')
-        # TODO(KNR): if we allow lower case variables skip this step if the variables contain 'x'
+        # TODO(KNR): if we allow lower case descriptions skip this step if the descriptions contain 'x'
         text = text.replace('x', '*')
 
         # Normalize braces.
@@ -156,22 +157,22 @@ class FormulaConverter:
         if not text:
             return ''
 
-        # Resolve multi-digit variables like AB to (10*A+B).
-        text = self._replace_multi_digit_variables(text=text)
+        # Resolve multi-digit descriptions like AB to (10*A+B).
+        text = self._replace_multi_digit_descriptions(text=text)
 
         # Special treatment for 'C', as we need it to reference other cells.
         # TODO(KNR): can be avoided when using addressing scheme R1C1
         if 'C' in self._variable_addresses:
             text = text.replace('C', 'C{0}'.format(self._variable_addresses['C']))
 
-        # References for all other variables.
+        # References for all other descriptions.
         for variable, index in self._variable_addresses.items():
             if variable != 'C':  # TODO(KNR): can be avoided when using addressing scheme R1C1
                 text = text.replace(variable, 'C{0}'.format(index))
         return '{0}'.format(text)
 
-    def _replace_multi_digit_variables(self, text):
-        ''' Resolve multi-digit variables like AB to (10*A+B). '''
+    def _replace_multi_digit_descriptions(self, text):
+        ''' Resolve multi-digit descriptions like AB to (10*A+B). '''
 
         multi_digits = re.compile('([{alternatives}][{alternatives}]+)'.format(
             alternatives=''.join(self._variable_addresses.keys())))
@@ -187,26 +188,21 @@ class FormulaConverter:
         return text
 
 
-class GoogleSheet:
+class WorksheetFactory:
     '''
-    Deals with Google Drive and the Google Docs Sheet.
+    Sets up a connection to Google Drive and provides a worksheet factory.
     '''
 
     def __init__(self, keyfile):
         ''' Authenticates with Google. '''
 
-        self._credentials = GoogleSheet._get_credentials(keyfile)
+        self._credentials = WorksheetFactory._get_credentials(keyfile)
         self._http = self._credentials.authorize(httplib2.Http())
         self._service = discovery.build('drive', 'v2', http=self._http)
         self._spreadsheets = gspread.authorize(self._credentials)
 
-    def generate(self, name, stages):
-        '''
-        Generates a sheet from stages.
-
-        Creates a new sheet if none found with the name of the cache.
-        '''
-
+    def create(self, name):
+        ''' Either returns the sheet for the given name or creates one if not found. '''
         worksheet = self._get_sheet(name=name)
         if not worksheet:
             worksheet = self._create_new_sheet(name=name)
@@ -216,34 +212,7 @@ class GoogleSheet:
         sheet_name = ('calculations02' if worksheet.sheet1.title == 'calculations01' else 'calculations01')
         sheet = worksheet.add_worksheet(title=sheet_name, rows=1000, cols=26)
         worksheet.del_worksheet(old_sheet)
-        row = 0
-        variable_addresses = {}
-        for stage in stages:
-            row += 1
-            sheet.update_acell('A{0}'.format(row), stage.name)
-            sheet.update_acell('B{0}'.format(row), stage.coordinates)
-            row += 1
-            sheet.update_acell('A{0}'.format(row), stage.description)
-            formula_row = row
-            for task in stage.tasks:
-                for variable in task.variables:
-                    if variable not in variable_addresses:
-                        row += 1
-                        sheet.update_acell('A{0}'.format(row), task.description)
-                        variable_addresses[variable] = row
-                        sheet.update_acell('B{0}'.format(row), variable)
-                    else:  # merge the task description into the existing task description
-                        variable_row = variable_addresses[variable]
-                        address = 'A{0}'.format(variable_row)
-                        value = '{0}\n{1}'.format(sheet.acell(address).value, task.description)
-                        sheet.update_acell(address, value)
-            if variable_addresses:
-                # Assuming the formula depends only on known variables (otherwise the geocache is broken).
-                converter = FormulaConverter(variable_addresses)
-                column = 2  # start in column B
-                for formula in converter.parse(stage.description):
-                    sheet.update_cell(row=formula_row, col=column, val=formula)
-                    column += 1
+        return sheet
 
     def _get_sheet(self, name):
         ''' Either returns the sheet for the given name or None if not found. '''
@@ -281,8 +250,91 @@ class GoogleSheet:
         store = oauth2client.file.Storage(credential_path)
         credentials = store.get()
         if not credentials or credentials.invalid:
-            # TODO(KNR): replace login_hint by a command line argument
+            flags = tools.argparser.parse_args(args=[])
             flow = client.flow_from_clientsecrets(keyfile, SCOPES)
             flow.user_agent = APPLICATION_NAME
-            credentials = tools.run(flow, store)
+            credentials = tools.run_flow(flow, store, flags)
         return credentials
+
+
+def _publish_as_sheet(name, rows, factory):
+    '''
+    Generate a Google Docs Sheet from a cell list.
+
+    Takes a list of rows, where each row is a list of cells and the position is encoded as row and column index,
+    and publishes the cell content to a Google Docs Sheet created by the factory.
+    '''
+
+    sheet = factory.create(name=name)
+    for row, columns in enumerate(rows):
+        for column, value in enumerate(columns):
+            if value:
+                sheet.update_cell(row=row + 1, col=column + 1, val=value)
+
+
+def _merge_tasks(stage, descriptions):
+    ''' Merges all descriptions of tasks mentioned in multiple stages and yields each stage. '''
+
+    # TODO(KNR): move to cache creation phase?
+    for task in stage.tasks:
+        for variable in task.variables:
+            if variable not in descriptions:
+                descriptions[variable] = [task.description]
+            else:  # merge the task description into the existing task description
+                descriptions[variable].append(task.description)
+    return stage
+
+
+def _count(element, counter):
+    ''' Counts the element and then returns the element. '''
+    counter.increment()
+    return element
+
+
+class _Counter(object):
+    ''' To count rows we need a stateful (i.e. non-primitive type) object. '''
+
+    # TODO(KNR): is there some existing mechanism we can use instead?
+    def __init__(self):
+        ''' Initializes the counter to 1, because sheet cell addresses are 1-based. '''
+        self._count = 1
+
+    def increment(self):
+        ''' Increment the count by 1 '''
+        self._count += 1
+
+    def get(self):
+        ''' Returns the current count '''
+        return self._count
+
+
+def _generate_rows_per_cache(stage, descriptions, variable_addresses, row_counter):
+    ''' Generator providing the rows to be published to the Google Docs Sheet. '''
+
+    # TODO(KNR): replace the dictionary based cache type by the same idiom
+    yield _count(element=[stage.name, stage.coordinates], counter=row_counter)
+    yield _count(element=[stage.description], counter=row_counter)
+    for task in stage.tasks:
+        for variable in task.variables:
+            if variable not in variable_addresses:
+                variable_addresses[variable] = row_counter.get()
+                yield _count(element=['\n'.join(descriptions[variable]), variable], counter=row_counter)
+    if variable_addresses:
+        converter = FormulaConverter(variable_addresses)
+        yield _count(element=converter.parse(stage.description), counter=row_counter)
+
+
+def publish(name, stages, factory):
+    ''' Generates a Google Docs Sheet with the passed name from the given stages. '''
+
+    # cannot use generator expression for _merge_tasks because we need to iterate over all tasks before preparing rows
+    descriptions = {}
+    merged = [_merge_tasks(stage=stage, descriptions=descriptions) for stage in stages]
+    variable_addresses = {}
+    counter = _Counter()
+    rows_generators = (_generate_rows_per_cache(stage=stage,
+                                                descriptions=descriptions,
+                                                variable_addresses=variable_addresses,
+                                                row_counter=counter) for stage in merged)
+    rows = generate_concatenation(rows_generators)
+    _publish_as_sheet(name=name, rows=rows, factory=factory)
