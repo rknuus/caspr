@@ -257,6 +257,23 @@ class WorksheetFactory:
         return credentials
 
 
+class _Counter(object):
+    ''' To count rows we need a stateful (i.e. non-primitive type) object. '''
+
+    # TODO(KNR): is there some existing mechanism we can use instead?
+    def __init__(self):
+        ''' Initializes the counter to 1, because sheet cell addresses are 1-based. '''
+        self._count = 1
+
+    def increment(self):
+        ''' Increment the count by 1 '''
+        self._count += 1
+
+    def get(self):
+        ''' Returns the current count '''
+        return self._count
+
+
 def _publish_as_sheet(name, rows, factory):
     '''
     Generate a Google Docs Sheet from a cell list.
@@ -285,43 +302,29 @@ def _merge_tasks(stage, descriptions):
     return stage
 
 
-def _count(element, counter):
-    ''' Counts the element and then returns the element. '''
-    counter.increment()
-    return element
-
-
-class _Counter(object):
-    ''' To count rows we need a stateful (i.e. non-primitive type) object. '''
-
-    # TODO(KNR): is there some existing mechanism we can use instead?
-    def __init__(self):
-        ''' Initializes the counter to 1, because sheet cell addresses are 1-based. '''
-        self._count = 1
-
-    def increment(self):
-        ''' Increment the count by 1 '''
-        self._count += 1
-
-    def get(self):
-        ''' Returns the current count '''
-        return self._count
-
-
-def _generate_rows_per_cache(stage, descriptions, variable_addresses, row_counter):
+def _generate_rows_per_stage(stages, descriptions, variable_addresses, row_counter):
     ''' Generator providing the rows to be published to the Google Docs Sheet. '''
 
     # TODO(KNR): replace the dictionary based cache type by the same idiom
-    yield _count(element=[stage.name, stage.coordinates], counter=row_counter)
-    yield _count(element=[stage.description], counter=row_counter)
-    for task in stage.tasks:
-        for variable in task.variables:
-            if variable not in variable_addresses:
-                variable_addresses[variable] = row_counter.get()
-                yield _count(element=['\n'.join(descriptions[variable]), variable], counter=row_counter)
-    if variable_addresses:
-        converter = FormulaConverter(variable_addresses)
-        yield _count(element=converter.parse(stage.description), counter=row_counter)
+    for stage in stages:
+        yield [stage.name, stage.coordinates]
+        yield [stage.description]
+        for task in stage.tasks:
+            for variable in task.variables:
+                if variable not in variable_addresses:
+                    variable_addresses[variable] = row_counter.get()
+                    yield ['\n'.join(descriptions[variable]), variable]
+        if variable_addresses:
+            # TODO(KNR): split formula conversion and variable address resolution, so we can resolve addresses when
+            # the variable places are fix
+            converter = FormulaConverter(variable_addresses)
+            yield converter.parse(stage.description)
+
+
+def _generate_row_counters(rows, row_counter):
+    for row in rows:
+        row_counter.increment()
+        yield row
 
 
 def publish(name, stages, factory):
@@ -329,12 +332,12 @@ def publish(name, stages, factory):
 
     # cannot use generator expression for _merge_tasks because we need to iterate over all tasks before preparing rows
     descriptions = {}
-    merged = [_merge_tasks(stage=stage, descriptions=descriptions) for stage in stages]
+    stages_with_unified_tasks = [_merge_tasks(stage=stage, descriptions=descriptions) for stage in stages]
     variable_addresses = {}
     counter = _Counter()
-    rows_generators = (_generate_rows_per_cache(stage=stage,
-                                                descriptions=descriptions,
-                                                variable_addresses=variable_addresses,
-                                                row_counter=counter) for stage in merged)
-    rows = generate_concatenation(rows_generators)
+    rows = _generate_rows_per_stage(stages=stages_with_unified_tasks,
+                                    descriptions=descriptions,
+                                    variable_addresses=variable_addresses,
+                                    row_counter=counter)
+    rows = _generate_row_counters(rows=rows, row_counter=counter)
     _publish_as_sheet(name=name, rows=rows, factory=factory)
