@@ -12,7 +12,6 @@ import os
 import re
 
 from caspr.casprexception import CasprException
-from caspr.generatortools import generate_concatenation
 from caspr.staticcoordinate import StaticCoordinate
 
 # NOTE: when changing the scope delete ~/.caspr/drive.json
@@ -82,15 +81,10 @@ class FormulaConverter:
                                                                          formula=formula,
                                                                          degree=FormulaConverter._DEGREE))
 
-    def parse(self, description):
+    def extract_formulae(self, description):
         '''
         Parses the given description and returns an iterable list of dynamic coordinates with resolved descriptions.
         '''
-
-        return self._generator(description=description)
-
-    def _generator(self, description):
-        ''' A generator returning dynamic coordinates with resolved descriptions created from the parsed description. '''
 
         assert 'x' not in self._variable_addresses, "'x' as variable name is currently not supported"
 
@@ -99,21 +93,19 @@ class FormulaConverter:
 
         for match in re.finditer(self._dynamic_dimension_re, string=description):
             normalized_coordinates = self._normalize(match.group())
+            yield normalized_coordinates
 
-            # Get rid of orientation, which might be misinterpreted as variable otherwise.
-            assert normalized_coordinates[1] in FormulaConverter._ORIENTATION
-            dynamic_coordinates = '="{0}"'.format(normalized_coordinates[1])
+    def get_orientation(self, formula):
+        assert formula[1] in FormulaConverter._ORIENTATION
+        return formula[1]
 
-            # TODO(KNR): replace commented out print by proper logging
-            # print('matching <', normalized_coordinates[3:], '> with <', self._formula_re.pattern, '>')
-            for group in self._formula_re.split(normalized_coordinates[3:]):
+    def split(self, formula):
+        for group in self._formula_re.split(formula[3:]):
+            if group:
                 if self._formula_re.match(group):
-                    dynamic_coordinates += '&'
-                    dynamic_coordinates += self._resolve_formula(text=group)
-                elif group:
-                    dynamic_coordinates += '&'
-                    dynamic_coordinates += '"{0}"'.format(group)
-            yield dynamic_coordinates
+                    yield self._resolve_formula(text=group)
+                else:
+                    yield '"{0}"'.format(group)
 
     def _mask_orientation(self, description):
         '''
@@ -257,6 +249,22 @@ class WorksheetFactory:
         return credentials
 
 
+def _publish_as_sheet(name, rows, factory):
+    '''
+    Generate a Google Docs Sheet from a cell list.
+
+    Takes a list of rows, where each row is a list of cells and the position is encoded as row and column index,
+    and publishes the cell content to a Google Docs Sheet created by the factory.
+    '''
+
+    sheet = factory.create(name=name)
+    for row, columns in enumerate(rows):
+        for column, value in enumerate(columns):
+            if value:
+                sheet.update_cell(row=row + 1, col=column + 1, val=value)
+
+
+# TODO(KNR): move the following stuff from googledotcom into module caches
 class _Counter(object):
     ''' To count rows we need a stateful (i.e. non-primitive type) object. '''
 
@@ -274,21 +282,6 @@ class _Counter(object):
         return self._count
 
 
-def _publish_as_sheet(name, rows, factory):
-    '''
-    Generate a Google Docs Sheet from a cell list.
-
-    Takes a list of rows, where each row is a list of cells and the position is encoded as row and column index,
-    and publishes the cell content to a Google Docs Sheet created by the factory.
-    '''
-
-    sheet = factory.create(name=name)
-    for row, columns in enumerate(rows):
-        for column, value in enumerate(columns):
-            if value:
-                sheet.update_cell(row=row + 1, col=column + 1, val=value)
-
-
 def _merge_tasks(stage, descriptions):
     ''' Merges all descriptions of tasks mentioned in multiple stages and yields each stage. '''
 
@@ -302,6 +295,14 @@ def _merge_tasks(stage, descriptions):
     return stage
 
 
+def _generate_formula(description, variable_addresses):
+    converter = FormulaConverter(variable_addresses)
+    for formula in converter.extract_formulae(description):
+        dynamic_coordinates = '="{0}"&{1}'.format(converter.get_orientation(formula),
+                                                  '&'.join(converter.split(formula)))
+        yield dynamic_coordinates
+
+
 def _generate_rows_per_stage(stages, descriptions, variable_addresses, row_counter):
     ''' Generator providing the rows to be published to the Google Docs Sheet. '''
 
@@ -309,16 +310,19 @@ def _generate_rows_per_stage(stages, descriptions, variable_addresses, row_count
     for stage in stages:
         yield [stage.name, stage.coordinates]
         yield [stage.description]
+        # TODO(KNR): consider to do the extraction of tasks from stage descriptions right here by merging in
+        # the DescriptionParser
         for task in stage.tasks:
+            # TODO(KNR): if task.description is a formula: don't split task.variables, rather
+            # yield [_generate_formula(description=task.description, variable_addresses=variable_addresses),
+            #        task.variables]
+            # else case:
             for variable in task.variables:
                 if variable not in variable_addresses:
                     variable_addresses[variable] = row_counter.get()
                     yield ['\n'.join(descriptions[variable]), variable]
         if variable_addresses:
-            # TODO(KNR): split formula conversion and variable address resolution, so we can resolve addresses when
-            # the variable places are fix
-            converter = FormulaConverter(variable_addresses)
-            yield converter.parse(stage.description)
+            yield _generate_formula(description=stage.description, variable_addresses=variable_addresses)
 
 
 def _generate_row_counters(rows, row_counter):

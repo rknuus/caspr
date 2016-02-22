@@ -7,7 +7,7 @@ import re
 import unittest
 
 from caspr.casprexception import CasprException
-from caspr.googledotcom import FormulaConverter, WorksheetFactory, publish
+from caspr.googledotcom import FormulaConverter, WorksheetFactory, _generate_formula, publish
 from caspr.stage import Stage, Task
 
 
@@ -119,35 +119,36 @@ class TestFormulaConverter(unittest.TestCase):
 
     def test_resolve_simple_dynamic_dimension(self):
         expected = ['="N"&" "&47&"° "&( C2 - C3 )&"."&( C2 * C6 - C5 * C6 - 3 * C3 )']
-        converter = FormulaConverter(variable_addresses=TestFormulaConverter._SAMPLE_ADDRESSES)
-        actual = converter.parse('N 47° [ B - C ].[ B x F - E x F - 3 x C ]')
+        actual = _generate_formula(
+            description='N 47° [ B - C ].[ B x F - E x F - 3 x C ]',
+            variable_addresses=TestFormulaConverter._SAMPLE_ADDRESSES)
         self.assertEqual(list(actual), expected)
 
     def test_resolve_dynamic_dimensions_in_text(self):
         expected = ['="N"&" "&47&"° "&( C2 - C3 )&"."&( C2 * C6 - C5 * C6 - 3 * C3 )',
                     '="E"&" "&008&"° "&( C2 )&"."&( C6 * ( C2 + C4 + 2 ) + C2 + 2 )']
-        converter = FormulaConverter(variable_addresses=TestFormulaConverter._SAMPLE_ADDRESSES)
-        actual = converter.parse('\n                Halte nach einem grossen Schriftzug mit einer Krone Ausschau.\n'
-                                 'A = wieviele Zacken hat die Krone?\nBCDEF = wandle den Namen nach dem System A=1, '
-                                 'B=2... um\nLook out for a big lettering with a crown.\nA = amount of spikes of the'
-                                 ' crown\nBCDEF = transform the name according to the system A=1, B=2...\n'
-                                 '__________________________________________\nRechne / \ncalculate:\n'
-                                 'N 47° [ B - C ].[ B x F - E x F - 3 x C ]\n'
-                                 'E 008° [ B ].[ F x ( B + D + 2 ) + B + 2 ]\n            ')
+        actual = _generate_formula(
+            description='\n                Halte nach einem grossen Schriftzug mit einer Krone Ausschau.\n'
+            'A = wieviele Zacken hat die Krone?\nBCDEF = wandle den Namen nach dem System A=1, '
+            'B=2... um\nLook out for a big lettering with a crown.\nA = amount of spikes of the'
+            ' crown\nBCDEF = transform the name according to the system A=1, B=2...\n'
+            '__________________________________________\nRechne / \ncalculate:\n'
+            'N 47° [ B - C ].[ B x F - E x F - 3 x C ]\n'
+            'E 008° [ B ].[ F x ( B + D + 2 ) + B + 2 ]\n            ',
+            variable_addresses=TestFormulaConverter._SAMPLE_ADDRESSES)
         self.assertEqual(list(actual), expected)
 
     def test_resolve_dynamic_coordinates(self):
         given = 'Der Schatz liegt bei N 47° PQ.RST E 008° VW.XYZ, wobei'
         expected = ['="N"&" "&47&"° "&(10*C16+1*C17)&"."&(100*C18+10*C19+1*C20) ',
                     '="E"&" "&008&"° "&(10*C22+1*C23)&"."&(100*C24+10*C25+1*C26)']
-        converter = FormulaConverter(variable_addresses=TestFormulaConverter._SAMPLE_ADDRESSES)
-        actual = converter.parse(given)
+        actual = _generate_formula(description=given, variable_addresses=TestFormulaConverter._SAMPLE_ADDRESSES)
         self.assertEqual(list(actual), expected)
 
     def test_match_static_coordinates(self):
         expected = []
         converter = FormulaConverter(variable_addresses=TestFormulaConverter._SAMPLE_ADDRESSES)
-        actual = converter.parse('N 47° 30.847')
+        actual = converter.extract_formulae('N 47° 30.847')
         self.assertEqual(list(actual), expected)
 
     def test_mask_doesnt_alter_if_no_match(self):
