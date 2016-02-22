@@ -249,7 +249,7 @@ class WorksheetFactory:
         return credentials
 
 
-def _publish_as_sheet(name, rows, factory):
+def publish_as_sheet(name, rows, factory):
     '''
     Generate a Google Docs Sheet from a cell list.
 
@@ -262,86 +262,3 @@ def _publish_as_sheet(name, rows, factory):
         for column, value in enumerate(columns):
             if value:
                 sheet.update_cell(row=row + 1, col=column + 1, val=value)
-
-
-# TODO(KNR): move the following stuff from googledotcom into module caches
-class _Counter(object):
-    ''' To count rows we need a stateful (i.e. non-primitive type) object. '''
-
-    # TODO(KNR): is there some existing mechanism we can use instead?
-    def __init__(self):
-        ''' Initializes the counter to 1, because sheet cell addresses are 1-based. '''
-        self._count = 1
-
-    def increment(self):
-        ''' Increment the count by 1 '''
-        self._count += 1
-
-    def get(self):
-        ''' Returns the current count '''
-        return self._count
-
-
-def _merge_tasks(stage, descriptions):
-    ''' Merges all descriptions of tasks mentioned in multiple stages and yields each stage. '''
-
-    # TODO(KNR): move to cache creation phase?
-    for task in stage.tasks:
-        for variable in task.variables:
-            if variable not in descriptions:
-                descriptions[variable] = [task.description]
-            else:  # merge the task description into the existing task description
-                descriptions[variable].append(task.description)
-    return stage
-
-
-def _generate_formula(description, variable_addresses):
-    converter = FormulaConverter(variable_addresses)
-    for formula in converter.extract_formulae(description):
-        dynamic_coordinates = '="{0}"&{1}'.format(converter.get_orientation(formula),
-                                                  '&'.join(converter.split(formula)))
-        yield dynamic_coordinates
-
-
-def _generate_rows_per_stage(stages, descriptions, variable_addresses, row_counter):
-    ''' Generator providing the rows to be published to the Google Docs Sheet. '''
-
-    # TODO(KNR): replace the dictionary based cache type by the same idiom
-    for stage in stages:
-        yield [stage.name, stage.coordinates]
-        yield [stage.description]
-        # TODO(KNR): consider to do the extraction of tasks from stage descriptions right here by merging in
-        # the DescriptionParser
-        for task in stage.tasks:
-            # TODO(KNR): if task.description is a formula: don't split task.variables, rather
-            # yield [_generate_formula(description=task.description, variable_addresses=variable_addresses),
-            #        task.variables]
-            # else case:
-            for variable in task.variables:
-                if variable not in variable_addresses:
-                    variable_addresses[variable] = row_counter.get()
-                    yield ['\n'.join(descriptions[variable]), variable]
-        if variable_addresses:
-            yield _generate_formula(description=stage.description, variable_addresses=variable_addresses)
-
-
-def _generate_row_counters(rows, row_counter):
-    for row in rows:
-        row_counter.increment()
-        yield row
-
-
-def publish(name, stages, factory):
-    ''' Generates a Google Docs Sheet with the passed name from the given stages. '''
-
-    # cannot use generator expression for _merge_tasks because we need to iterate over all tasks before preparing rows
-    descriptions = {}
-    stages_with_unified_tasks = [_merge_tasks(stage=stage, descriptions=descriptions) for stage in stages]
-    variable_addresses = {}
-    counter = _Counter()
-    rows = _generate_rows_per_stage(stages=stages_with_unified_tasks,
-                                    descriptions=descriptions,
-                                    variable_addresses=variable_addresses,
-                                    row_counter=counter)
-    rows = _generate_row_counters(rows=rows, row_counter=counter)
-    _publish_as_sheet(name=name, rows=rows, factory=factory)
